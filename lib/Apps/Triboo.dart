@@ -1,5 +1,10 @@
 
 import 'package:flutter/material.dart';
+import 'package:triboo/Views/HomeView.dart';
+import 'package:triboo/Views/LoginView.dart';
+import 'package:triboo/Views/ProfileUserView.dart';
+import 'package:triboo/Views/RegisterView.dart';
+import 'package:triboo/Views/SplashView.dart';
 
 
 class Triboo extends StatelessWidget {
@@ -7,11 +12,10 @@ class Triboo extends StatelessWidget {
   Widget build(BuildContext context) {
 
     // Hay que definir un array de rutas
-    Map<String,Widget Function(BuildContext)> rutasNavegacion = {
+    Map<String,Widget Function(BuildContext)> rutasNavegacion ={
       '/SplashView':(context)=> SplashView(),
       '/LoginView':(context)=> LoginView(),
       '/HomeView':(context)=>  HomeView(),
-      '/MainView':(context)=> MainView(),
       '/RegisterView':(context) => RegisterView(),
       '/ProfileUserView':(context) => ProfileUserView(),
     };

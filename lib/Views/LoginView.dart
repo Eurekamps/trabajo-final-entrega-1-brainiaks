@@ -1,6 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../Statics/DataHolder.dart';
+
 
 class LoginView extends StatefulWidget {
   @override
@@ -15,11 +18,35 @@ class _LoginViewState extends State<LoginView> {
 
   void clickLog() async {
     try {
+      // Autentica al usuario
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: tecUser.text,
         password: tecPass.text,
       );
-      Navigator.of(context).pushNamed("/HomeView");
+
+      // Obtén el UID del usuario autenticado
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+
+      if (userId != null) {
+        // Llama al método de DataHolder para descargar el perfil
+        await DataHolder().getUserProfile(userId);
+
+        // Verifica si el perfil existe
+        if (DataHolder().userProfile == null) {
+          // Si no existe perfil, redirige al ProfileUserView
+          Navigator.of(context).pushReplacementNamed("/ProfileUserView");
+        } else {
+          // Si el perfil existe, navega a la siguiente pantalla
+          Navigator.of(context).pushReplacementNamed(
+            "/HomeView",
+            arguments: DataHolder().userProfile,
+          );
+        }
+      } else {
+        setState(() {
+          errorMessage = 'No se encontró el usuario.';
+        });
+      }
     } on FirebaseAuthException catch (e) {
       setState(() {
         errorMessage = e.message ?? 'Error al iniciar sesión.';

@@ -7,7 +7,10 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 import '../FBObjects/FbPerfil.dart';
+import '../Statics/DataHolder.dart';
 import 'LoadingView.dart';
+
+
 class ProfileUserView extends StatefulWidget {
   @override
   State<ProfileUserView> createState() => _ProfileUserViewState();
@@ -20,6 +23,13 @@ class _ProfileUserViewState extends State<ProfileUserView> {
   File? profileImage;
   final ImagePicker picker = ImagePicker();
   DateTime? selectedBirthday;
+
+  // Método para manejar los errores y actualizar el estado
+  void handleError(String error) {
+    setState(() {
+      errorMessage = error;
+    });
+  }
 
   Future<void> selectImage() async {
     final pickedFile = await showDialog<ImageSource>(
@@ -104,10 +114,8 @@ class _ProfileUserViewState extends State<ProfileUserView> {
         cumple: "${selectedBirthday?.day}-${selectedBirthday?.month}-${selectedBirthday?.year}",
       );
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .set(perfil.toFirestore());
+      // Guarda el perfil en Firestore a través de DataHolder
+      await DataHolder().saveUserProfile(perfil, uid!, handleError);
 
       // Cierra la pantalla de carga y navega a la vista de inicio
       Navigator.pop(context);

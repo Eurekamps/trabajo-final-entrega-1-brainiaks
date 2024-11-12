@@ -56,7 +56,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Image.asset(
-                'assets/images/Triboo.png',
+                'assets/images/triboo.png',
                 height: 200,
               ),
               SizedBox(height: 30),
@@ -88,7 +88,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
               RotationTransition(
                 turns: _controller,
                 child: Image.asset(
-                  'assets/images/Tomahawk.png',
+                  'assets/images/tomahawk.png',
                   height: 60, // Ajusta el tamaño de la imagen
                 ),
               ),

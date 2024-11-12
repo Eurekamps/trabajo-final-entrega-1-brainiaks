@@ -58,7 +58,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBkzija6ihf8OXUJP95_OqwvvLZdw0ADNk',
-    appId: '1:148113514149:android:ca986df230531e2904774c',
+    appId: '1:148113514149:android:cb0e6d7ddcaedf8a04774c',
     messagingSenderId: '148113514149',
     projectId: 'triboo-5fcea',
     storageBucket: 'triboo-5fcea.firebasestorage.app',
@@ -72,4 +72,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'triboo-5fcea.firebasestorage.app',
     iosBundleId: 'com.brainiaKs.triboo',
   );
+
 }

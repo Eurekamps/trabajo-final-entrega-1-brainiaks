@@ -17,17 +17,16 @@ class NavBar extends StatefulWidget{
 }
 
 class _NavBarState extends State<NavBar> {
+
+  NavButton _itemBuilder(BuildContext context, int i) {
+    return widget.arButtons[i]; // Devuelve el NavButton desde la lista arButtons
+  }
+
   @override
   Widget build(BuildContext context) {
 
     return Container(
-      child: Row(children: [
-        widget.arButtons[0],
-        widget.arButtons[1],
-        widget.arButtons[2],
-        widget.arButtons[3],
-        widget.arButtons[4],
-      ],),
+      child: ListView.builder(itemBuilder: _itemBuilder , itemCount: widget.arButtons.length,)
     );
   }
 }

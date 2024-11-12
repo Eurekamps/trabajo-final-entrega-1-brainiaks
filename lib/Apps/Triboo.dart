@@ -1,10 +1,13 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:triboo/Views/HomeView.dart';
 import 'package:triboo/Views/LoginView.dart';
 import 'package:triboo/Views/ProfileUserView.dart';
 import 'package:triboo/Views/RegisterView.dart';
 import 'package:triboo/Views/SplashView.dart';
+
+import '../localization/app_localizations.dart';
 
 
 class Triboo extends StatelessWidget {
@@ -24,8 +27,27 @@ class Triboo extends StatelessWidget {
       routes: rutasNavegacion,
       initialRoute: '/SplashView',
       debugShowCheckedModeBanner: false, // Oculta el banner de debug
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', 'US'), // Inglés
+        Locale('es', 'ES'), // Español
+        // Agrega más locales si es necesario
+      ],
+      localeResolutionCallback: (locale, supportedLocales) {
+        for (var supportedLocale in supportedLocales) {
+          if (supportedLocale.languageCode == locale?.languageCode) {
+            return supportedLocale;
+          }
+        }
+        return supportedLocales.first;
+      },
     );
-    return app;
 
+    return app;
   }
 }

@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class SplashView extends StatefulWidget {
@@ -6,13 +7,27 @@ class SplashView extends StatefulWidget {
   State<SplashView> createState() => _SplashViewState();
 }
 
-class _SplashViewState extends State<SplashView> {
+class _SplashViewState extends State<SplashView> with SingleTickerProviderStateMixin {
   double dbPorcentaje = 0.0;
+  late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
+
+    // Inicializar el controlador de animación para la rotación de la imagen
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500), // Tiempo para una rotación completa
+      vsync: this,
+    )..repeat(); // Repite la animación continuamente
+
     Loading();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   void Loading() async {
@@ -23,10 +38,9 @@ class _SplashViewState extends State<SplashView> {
       await Future.delayed(Duration(milliseconds: 100));
     }
 
-    if(FirebaseAuth.instance.currentUser!=null){
+    if (FirebaseAuth.instance.currentUser != null) {
       Navigator.of(context).pushReplacementNamed("/HomeView");
-    }
-    else{
+    } else {
       Navigator.of(context).pushReplacementNamed("/LoginView");
     }
   }
@@ -34,50 +48,49 @@ class _SplashViewState extends State<SplashView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blueGrey[900],
+      backgroundColor: Colors.amber[200], // Fondo color crema
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                "Premios CELO 2024-2025",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 1.5,
-                ),
-                textAlign: TextAlign.center,
+              Image.asset(
+                'assets/images/Triboo.png',
+                height: 200,
               ),
+              SizedBox(height: 30),
               SizedBox(height: 30),
               Text(
                 "Cargando...",
                 style: TextStyle(
                   fontSize: 18,
-                  color: Colors.white70,
+                  color: Colors.brown[600],
                 ),
               ),
               SizedBox(height: 20),
               LinearProgressIndicator(
                 value: dbPorcentaje,
                 minHeight: 8,
-                backgroundColor: Colors.white24,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.lightBlueAccent),
+                backgroundColor: Colors.brown[100],
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.brown[700]!),
               ),
               SizedBox(height: 20),
               Text(
                 "${(dbPorcentaje * 100).toStringAsFixed(0)}%",
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.white60,
+                  color: Colors.brown[500],
                 ),
               ),
               SizedBox(height: 40),
-              CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.lightBlueAccent),
-                strokeWidth: 5,
+              // Imagen rotatoria en lugar de CircularProgressIndicator
+              RotationTransition(
+                turns: _controller,
+                child: Image.asset(
+                  'assets/images/Tomahawk.png',
+                  height: 60, // Ajusta el tamaño de la imagen
+                ),
               ),
             ],
           ),

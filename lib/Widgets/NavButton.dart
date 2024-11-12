@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 //Esta clase representa a los botones de la barra de navegación
 
@@ -27,8 +28,11 @@ class _NavButtonState extends State<NavButton> {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: Icon(widget.idIcon), // Usa el icono pasado
-      onPressed: _navigate, // Navega al pulsar
+      icon: FaIcon(widget.idIcon),
+      color: Colors.lightBlueAccent,
+      onPressed: () {
+        _navigate();
+      },
     );
   }
 }

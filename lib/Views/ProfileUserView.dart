@@ -1,6 +1,8 @@
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,7 +11,6 @@ import 'dart:io';
 import '../FBObjects/FbPerfil.dart';
 import '../Statics/DataHolder.dart';
 import 'LoadingView.dart';
-
 
 class ProfileUserView extends StatefulWidget {
   @override
@@ -20,11 +21,11 @@ class _ProfileUserViewState extends State<ProfileUserView> {
   TextEditingController tecName = TextEditingController();
   TextEditingController tecNickname = TextEditingController();
   String errorMessage = '';
-  File? profileImage;
+  XFile? profileImage;
   final ImagePicker picker = ImagePicker();
   DateTime? selectedBirthday;
+  Uint8List? _imageBytes;
 
-  // Método para manejar los errores y actualizar el estado
   void handleError(String error) {
     setState(() {
       errorMessage = error;
@@ -32,43 +33,72 @@ class _ProfileUserViewState extends State<ProfileUserView> {
   }
 
   Future<void> selectImage() async {
-    final pickedFile = await showDialog<ImageSource>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Seleccionar Imagen"),
-          content: Text("¿Quieres tomar una foto o seleccionar de la galería?"),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(ImageSource.camera),
-              child: Text("Tomar Foto"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(ImageSource.gallery),
-              child: Text("Seleccionar de la Galería"),
-            ),
-          ],
-        );
-      },
-    );
+    try {
+      final ImageSource? pickedSource = await showDialog<ImageSource>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text("Seleccionar Imagen"),
+            content: Text("¿Quieres tomar una foto o seleccionar de la galería?"),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(ImageSource.camera),
+                child: Text("Tomar Foto"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(ImageSource.gallery),
+                child: Text("Seleccionar de la Galería"),
+              ),
+            ],
+          );
+        },
+      );
 
-    if (pickedFile != null) {
-      final XFile? file = await picker.pickImage(source: pickedFile);
-      if (file != null) {
-        setState(() {
-          profileImage = File(file.path);
-        });
+      if (pickedSource != null) {
+        final XFile? file = await picker.pickImage(source: pickedSource);
+        if (file != null) {
+          final bytes = await file.readAsBytes();
+          setState(() {
+            profileImage = file;
+            _imageBytes = bytes;
+          });
+          print('Imagen cargada desde ${pickedSource == ImageSource.camera ? 'la cámara' : 'la galería'}');
+        } else {
+          print('No se pudo obtener la imagen seleccionada');
+        }
+      } else {
+        print('No se seleccionó ninguna opción');
       }
+    } catch (e) {
+      print('Error al seleccionar la imagen: $e');
     }
   }
 
-  Future<String?> uploadImage(File image) async {
+  Future<String?> uploadImage(XFile image) async {
     try {
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('imagenes/usuarios/${FirebaseAuth.instance.currentUser?.uid}/avatar.jpg');
-      await storageRef.putFile(image);
-      return await storageRef.getDownloadURL();
+      if (kIsWeb) {
+        final Uint8List imageBytes = await image.readAsBytes();
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('imagenes/usuarios/${FirebaseAuth.instance.currentUser?.uid}/avatar.jpg');
+        final metadata = SettableMetadata(contentType: 'image/jpeg');
+
+        await storageRef.putData(imageBytes, metadata);
+        String downloadUrl = await storageRef.getDownloadURL();
+
+        print('URL de la imagen subida en la web: $downloadUrl');
+        return downloadUrl;
+      } else {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('imagenes/usuarios/${FirebaseAuth.instance.currentUser?.uid}/avatar.jpg');
+        final file = File(image.path);
+        await storageRef.putFile(file);
+        String downloadUrl = await storageRef.getDownloadURL();
+
+        print('URL de la imagen subida en dispositivo móvil: $downloadUrl');
+        return downloadUrl;
+      }
     } catch (e) {
       print("Error uploading image: $e");
       setState(() {
@@ -86,7 +116,6 @@ class _ProfileUserViewState extends State<ProfileUserView> {
       return;
     }
 
-    // Navegar a la pantalla de carga
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => LoadingView()),
@@ -96,7 +125,7 @@ class _ProfileUserViewState extends State<ProfileUserView> {
     if (profileImage != null) {
       imageUrl = await uploadImage(profileImage!);
       if (imageUrl == null) {
-        Navigator.pop(context); // Cierra la pantalla de carga
+        Navigator.pop(context);
         setState(() {
           errorMessage = 'Error al subir la imagen.';
         });
@@ -114,14 +143,12 @@ class _ProfileUserViewState extends State<ProfileUserView> {
         cumple: "${selectedBirthday?.day}-${selectedBirthday?.month}-${selectedBirthday?.year}",
       );
 
-      // Guarda el perfil en Firestore a través de DataHolder
       await DataHolder().saveUserProfile(perfil, uid!, handleError);
 
-      // Cierra la pantalla de carga y navega a la vista de inicio
       Navigator.pop(context);
       Navigator.popAndPushNamed(context, "/HomeView");
     } catch (e) {
-      Navigator.pop(context); // Cierra la pantalla de carga
+      Navigator.pop(context);
       setState(() {
         errorMessage = 'Error al subir los datos del perfil.';
       });
@@ -187,9 +214,13 @@ class _ProfileUserViewState extends State<ProfileUserView> {
                 onTap: selectImage,
                 child: CircleAvatar(
                   radius: 50,
-                  backgroundImage: profileImage != null ? FileImage(profileImage!) : null,
+                  backgroundImage: kIsWeb
+                      ? (_imageBytes != null ? MemoryImage(_imageBytes!) : null)
+                      : (profileImage != null ? FileImage(File(profileImage!.path)) : null),
                   backgroundColor: Colors.white10,
-                  child: profileImage == null ? Icon(Icons.add_a_photo, color: Colors.white70) : null,
+                  child: (profileImage == null && _imageBytes == null)
+                      ? Icon(Icons.add_a_photo, color: Colors.white70)
+                      : null,
                 ),
               ),
               SizedBox(height: 16),

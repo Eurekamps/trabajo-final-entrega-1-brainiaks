@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'HomeView.dart';
+
 class HomerView extends StatefulWidget{
   @override
   State<HomerView> createState() => _HomerViewState();
@@ -9,10 +11,16 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
 
   late TabController _tabController;
 
+  final Widget _farRightScreen = HomeView();  //He puesto El HomeView como place holder cuando queramos cambiar alguna pantalla se cambia aqui.
+  final Widget _centerRightScreen = HomeView();
+  final Widget _trueCenterScreen = HomeView();
+  final Widget _centerLeftScreen = HomeView();
+  final Widget _farLeftScreen = HomeView();
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -33,9 +41,11 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
             child: TabBarView(
               controller: _tabController,
               children: [
-                Center(child: Text("Mis Tiendas")), // Aquí puedes agregar contenido
-                Center(child: Text("Todas las Tiendas")),
-                Center(child: Text("Crear Tienda")),
+                Center(child: _farRightScreen), // Aquí puedes agregar contenido
+                Center(child: _centerRightScreen),
+                Center(child: _trueCenterScreen),
+                Center(child: _centerLeftScreen),
+                Center(child: _farLeftScreen),
               ],
             ),
           ),
@@ -44,9 +54,11 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
       bottomNavigationBar: TabBar(
         controller: _tabController,
         tabs: [
-          Tab(icon: Icon(Icons.store), text: "Mis Tiendas"),
-          Tab(icon: Icon(Icons.star), text: "Todas las Tiendas"),
-          Tab(icon: Icon(Icons.create_new_folder), text: "Crear Tienda"),
+          Tab(icon: Icon(Icons.home)),
+          Tab(icon: Icon(Icons.search)),
+          Tab(icon: Icon(Icons.local_fire_department)),
+          Tab(icon: Icon(Icons.create_new_folder)),
+          Tab(icon: Icon(Icons.person)),
         ],
       ),
     );

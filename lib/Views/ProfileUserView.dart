@@ -145,6 +145,7 @@ class _ProfileUserViewState extends State<ProfileUserView> {
 
       await DataHolder().saveUserProfile(perfil, uid!, handleError);
 
+      DataHolder().userProfile=perfil;
       Navigator.pop(context);
       Navigator.popAndPushNamed(context, "/HomeView");
     } catch (e) {

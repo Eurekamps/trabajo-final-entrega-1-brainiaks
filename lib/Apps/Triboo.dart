@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:triboo/Views/HomeView.dart';
+import 'package:triboo/Views/HomerView.dart';
 import 'package:triboo/Views/LoginView.dart';
 import 'package:triboo/Views/ProfileUserView.dart';
 import 'package:triboo/Views/RegisterView.dart';
@@ -18,7 +19,7 @@ class Triboo extends StatelessWidget {
     Map<String,Widget Function(BuildContext)> rutasNavegacion ={
       '/SplashView':(context)=> SplashView(),
       '/LoginView':(context)=> LoginView(),
-      '/HomeView':(context)=>  HomeView(),
+      '/HomeView':(context)=>  HomerView(),
       '/RegisterView':(context) => RegisterView(),
       '/ProfileUserView':(context) => ProfileUserView(),
     };

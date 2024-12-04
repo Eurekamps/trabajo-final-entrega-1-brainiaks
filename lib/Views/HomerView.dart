@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:triboo/Views/Customs/CustomDrawer.dart';
+import 'package:triboo/Views/LoginView.dart';
 
 import 'HomeView.dart';
 
@@ -11,11 +12,13 @@ class HomerView extends StatefulWidget {
 class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final Widget _farRightScreen = HomeView();
-  final Widget _centerRightScreen = HomeView();
-  final Widget _trueCenterScreen = HomeView();
+  final Widget _farLeftScreen = LoginView();
   final Widget _centerLeftScreen = HomeView();
-  final Widget _farLeftScreen = HomeView();
+  final Widget _trueCenterScreen = HomeView();
+  final Widget _centerRightScreen = HomeView();
+  final Widget _farRightScreen = HomeView();
+
+
 
   @override
   void initState() {
@@ -48,11 +51,11 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
             child: TabBarView(
               controller: _tabController,
               children: [
-                Center(child: _farRightScreen),
-                Center(child: _centerRightScreen),
-                Center(child: _trueCenterScreen),
-                Center(child: _centerLeftScreen),
                 Center(child: _farLeftScreen),
+                Center(child: _centerLeftScreen),
+                Center(child: _trueCenterScreen),
+                Center(child: _centerRightScreen),
+                Center(child: _farRightScreen),
               ],
             ),
           ),

@@ -143,7 +143,7 @@ class _ProfileUserViewState extends State<ProfileUserView> {
         cumple: "${selectedBirthday?.day}-${selectedBirthday?.month}-${selectedBirthday?.year}",
       );
 
-      await DataHolder().saveUserProfile(perfil, uid!, handleError);
+      await DataHolder().fbAdmin.saveFBData(collectionPath: "users", data: perfil.toFirestore(), onError: handleError);
 
       DataHolder().userProfile=perfil;
       Navigator.pop(context);

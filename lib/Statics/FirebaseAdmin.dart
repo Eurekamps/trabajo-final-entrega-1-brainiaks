@@ -39,28 +39,82 @@ class FirebaseAdmin{
   }
 
 
-  /// Función genérica para obtener datos desde Firestore.
-  /// [collectionPath] es la ruta de la colección.
-  /// [docId] es opcional para obtener un documento específico.
+  /// Función genérica para obtener un documento específico desde Firestore.
+  ///
+  /// [collectionPath] es la ruta de la colección en Firestore (por ejemplo, "users").
+  /// [docId] es el identificador único del documento dentro de la colección que se desea obtener.
+  /// [onError] es un callback opcional que se ejecuta si ocurre un error durante la consulta.
+  ///   - Recibe un mensaje de error como argumento.
+  ///
+  /// Retorna un [DocumentSnapshot<Map<String, dynamic>>?]:
+  ///   - Si el documento existe, se devuelve el snapshot del documento.
+  ///   - Si el documento no existe o ocurre un error, retorna `null`.
   Future<DocumentSnapshot<Map<String, dynamic>>?> fetchFBData({
     required String collectionPath,
-    required String? docId,
+    required String docId,
+    Function(String)? onError,
   }) async {
     try {
       final firestore = FirebaseFirestore.instance;
-      if (docId != null) {
-        // Consultar un documento específico
-        final documentSnapshot = await firestore.collection(collectionPath).doc(docId).get();
-        if (documentSnapshot.exists) {
-          return documentSnapshot;
-        } else {
-          return null; // Si no existe el documento
-        }
+      final documentSnapshot = await firestore.collection(collectionPath).doc(docId).get();
+      if (documentSnapshot.exists) {
+        return documentSnapshot;
+      } else {
+        return null;
       }
     } catch (e) {
       print('Error fetching data: $e');
+      if(onError != null) onError('Error al guardar el perfil: $e');
     }
     return null;
+  }
+
+  /// Función genérica para obtener una lista de datos desde Firestore.
+  /// [collectionPath] es la ruta de la colección.
+  /// [filters] es opcional para obtener solo los datos que respeten unos filtros
+  Future<List<DocumentSnapshot<Map<String, dynamic>>>?> fetchFBDataList({
+    required String collectionPath,
+    Map<String, dynamic>? filters,
+  }) async {
+
+    return null;
+  }
+
+  /// Función genérica para subir datos a Firestore.
+  ///
+  /// [collectionPath] es la ruta de la colección en Firestore (por ejemplo, "users").
+  /// [data] es un mapa que contiene los datos que se desean guardar en Firestore.
+  /// [docId] es el identificador único del documento dentro de la colección.
+  ///   - Si se proporciona, se usará este ID para el documento.
+  ///   - Si se omite, Firestore generará automáticamente un ID único para el documento.
+  /// [onError] es un callback opcional que se ejecuta si ocurre un error durante la operación.
+  ///   - Recibe un mensaje de error como argumento.
+  ///
+  /// Esta función guarda los datos en Firestore:
+  ///   - Si [docId] se proporciona, usa el método `set` para sobrescribir o crear el documento con ese ID.
+  ///   - Si [docId] no se proporciona, usa el método `add` para crear un documento con un ID generado automáticamente.
+  ///
+  /// No retorna ningún valor. Si ocurre un error, se ejecuta el callback [onError] si está definido.
+    Future<void> saveFBData({
+      required String collectionPath,
+      required Map<String, dynamic> data,
+      String? docId,
+      Function(String)? onError
+    }) async{
+    try {
+      if (docId != null) {
+        await FirebaseFirestore.instance
+            .collection(collectionPath)
+            .doc(docId)
+            .set(data);
+      } else{
+        await FirebaseFirestore.instance
+            .collection(collectionPath)
+            .add(data);
+      }
+    } catch (e) {
+      if(onError != null) onError('Error al guardar el perfil: $e');
+    }
   }
 
 

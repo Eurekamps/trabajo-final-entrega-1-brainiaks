@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:triboo/Statics/FirebaseAdmin.dart';
 
 
 import '../FBObjects/FbPerfil.dart';
@@ -8,6 +9,7 @@ class DataHolder {
   static final DataHolder _dataHolder = DataHolder._internal();
 
   FbPerfil? userProfile;
+  FirebaseAdmin fbAdmin = FirebaseAdmin();
 
   // Constructor privado
   DataHolder._internal();

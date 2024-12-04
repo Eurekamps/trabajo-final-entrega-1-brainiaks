@@ -8,8 +8,8 @@ class FirebaseAdmin{
 
 
   late String logInError;
-  late FbPerfil? currentProfile;
 
+  /// Función que se encarga del logeo en Firebase y uqe descarga el perfil.
   Future<void> logIn(String email, String password) async {
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -17,72 +17,51 @@ class FirebaseAdmin{
         password: password,
       );
       try {
-        final data = await fetchData(collectionPath: 'users', docId: FirebaseAuth.instance.currentUser?.uid);
-        /*final snapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(FirebaseAuth.instance.currentUser?.uid)
-            .get();*/
-        if (data.exists) {
-          currentProfile = FbPerfil.fromFirestore(data, null);
-        } else {
-          print("Perfil de usuario no encontrado en Firestore.");
-          currentProfile = null;
+        final data = await fetchFBData(collectionPath: 'users', docId: FirebaseAuth.instance.currentUser!.uid);
+        if(data != null){
+          if (data.exists) {
+            DataHolder().userProfile = FbPerfil.fromFirestore(data, null);
+          } else {
+            print("Perfil de usuario no encontrado en Firestore.");
+            DataHolder().userProfile = null;
+          }
+        }else{
+          DataHolder().userProfile = null;
         }
       } catch (e) {
         print("Error al obtener el perfil: $e");
-        currentProfile = null;
+        DataHolder().userProfile = null;
       }
     } on FirebaseAuthException catch (e) {
      logInError = e.message!;
     }
+    return ;
   }
 
 
   /// Función genérica para obtener datos desde Firestore.
   /// [collectionPath] es la ruta de la colección.
   /// [docId] es opcional para obtener un documento específico.
-  /// [filters] permite agregar filtros (pares campo-valor).
-  /// Retorna una lista de Map<String, dynamic> con los datos obtenidos.
-  Future fetchData({
+  Future<DocumentSnapshot<Map<String, dynamic>>?> fetchFBData({
     required String collectionPath,
-     String? docId,
-    Map<String, dynamic>? filters,
+    required String? docId,
   }) async {
     try {
       final firestore = FirebaseFirestore.instance;
-
       if (docId != null) {
         // Consultar un documento específico
         final documentSnapshot = await firestore.collection(collectionPath).doc(docId).get();
         if (documentSnapshot.exists) {
-          return [documentSnapshot];
+          return documentSnapshot;
         } else {
-          return []; // Si no existe el documento
+          return null; // Si no existe el documento
         }
-      } else {
-        // Consultar una colección
-        Query query = firestore.collection(collectionPath);
-
-        // Aplicar filtros, si los hay
-        if (filters != null) {
-          filters.forEach((key, value) {
-            query = query.where(key, isEqualTo: value);
-          });
-        }
-
-        final querySnapshot = await query.get();
-
-        // Convertir los resultados en una lista de mapas
-        return querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
       }
     } catch (e) {
       print('Error fetching data: $e');
-      return [];
     }
+    return null;
   }
 
 
-  Future<void> getUserProfile(String userId) async {
-
-  }
 }

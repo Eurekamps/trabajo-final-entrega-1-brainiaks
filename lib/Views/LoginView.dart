@@ -17,7 +17,21 @@ class _LoginViewState extends State<LoginView> {
   bool _isPasswordVisible = false; // Variable para controlar la visibilidad de la contraseña
 
   void clickLog() async {
-    try {
+
+    await DataHolder().fbAdmin.logIn( tecUser.text, tecPass.text);
+
+    if (DataHolder().userProfile == null) {
+      // Si no existe perfil, redirige al ProfileUserView
+      Navigator.of(context).pushReplacementNamed("/ProfileUserView");
+    } else {
+      // Si el perfil existe, navega a la siguiente pantalla
+      Navigator.of(context).pushReplacementNamed(
+        "/HomeView",
+        arguments: DataHolder().userProfile,
+      );
+    }
+
+    /*try {
       // Autentica al usuario
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: tecUser.text,
@@ -51,7 +65,7 @@ class _LoginViewState extends State<LoginView> {
       setState(() {
         errorMessage = e.message ?? 'Error al iniciar sesión.';
       });
-    }
+    }*/
   }
 
   void clearFields() {

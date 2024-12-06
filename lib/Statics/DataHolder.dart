@@ -20,7 +20,7 @@ class DataHolder {
   }
 
   // Método para obtener el perfil de usuario desde Firestore
-  Future<void> getUserProfile(String userId) async {
+  Future<bool> getUserProfile(String userId) async {
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('profiles')
@@ -29,13 +29,17 @@ class DataHolder {
 
       if (snapshot.exists) {
         userProfile = FbPerfil.fromFirestore(snapshot, null);
+        print("Perfil cargado: ${userProfile.toString()}");
+        return true;
       } else {
         print("Perfil de usuario no encontrado en Firestore.");
         userProfile = null;
+        return false;
       }
     } catch (e) {
       print("Error al obtener el perfil: $e");
       userProfile = null;
+      return false;
     }
   }
 

@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../Statics/DataHolder.dart';
+import '../LoginView.dart';
+import '../Statics/DataHolder.dart';
+import '../Views/ChangeProfileView.dart';
+import '../Views/LoginView.dart';
+import 'CustomConfiguration.dart';
 
-class CustomDrawer extends StatefulWidget {
-  @override
-  State<CustomDrawer> createState() => _CustomDrawerState();
-}
-
-class _CustomDrawerState extends State<CustomDrawer> {
-
+class CustomDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Obtener el ID del usuario actual desde Firebase Authentication
@@ -38,8 +37,8 @@ class _CustomDrawerState extends State<CustomDrawer> {
           );
         }
 
-        // Si el perfil no se encuentra o AdminProfile es null
-        else if (snapshot.data == false || DataHolder().userProfile == null) {
+        // Si el perfil no se encuentra o `AdminProfile` es null
+        else if (snapshot.data == false || DataHolder().AdminProfile == null) {
           return Center(
             child: const Text(
               'No se encontró el perfil del usuario.',
@@ -50,8 +49,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
 
         // Si los datos se cargaron correctamente, construimos el Drawer
         else {
-          final userProfile = DataHolder().userProfile!; // Perfil del usuario cargado
-
+          final userProfile = DataHolder().AdminProfile!; // Perfil del usuario cargado
 
           return Drawer(
             child: ListView(
@@ -90,29 +88,50 @@ class _CustomDrawerState extends State<CustomDrawer> {
                   leading: const Icon(Icons.home),
                   title: const Text('Inicio'),
                   onTap: () {
-
+                    Navigator.pop(context); // Cierra el Drawer
+                    // Aquí puedes navegar a la pantalla inicial
                   },
                 ),
                 ListTile(
                   leading: const Icon(Icons.person),
                   title: const Text('Perfil'),
                   onTap: () {
-
+                    Navigator.pop(context); // Cierra el Drawer
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChangeProfileView(),
+                      ),
+                    ); // Navega a la vista de perfil
                   },
                 ),
                 ListTile(
                   leading: const Icon(Icons.settings),
                   title: const Text('Configuración'),
                   onTap: () {
-
+                    Navigator.pop(context); // Cierra el Drawer
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CustomConfiguration(),
+                      ),
+                    ); // Navega a la vista de configuración
                   },
                 ),
                 ListTile(
                   leading: const Icon(Icons.logout),
                   title: const Text('Cerrar Sesión'),
                   onTap: () async {
+                    // Cierra la sesión de Firebase Authentication
+                    await FirebaseAuth.instance.signOut();
 
-
+                    // Redirige al LoginView
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LoginView(),
+                      ),
+                    );
                   },
                 ),
               ],
@@ -125,6 +144,13 @@ class _CustomDrawerState extends State<CustomDrawer> {
 
   // Función auxiliar para cargar el perfil del usuario
   Future<bool> _loadUserProfile(String userId) async {
-    return true;
+    try {
+      // Llamamos al método de DataHolder para cargar el perfil
+      bool result = await DataHolder().getUserProfile(userId);
+      return result;
+    } catch (e) {
+      print('Error al cargar el perfil: $e');
+      return false;
+    }
   }
 }

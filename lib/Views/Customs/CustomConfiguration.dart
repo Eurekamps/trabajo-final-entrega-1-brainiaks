@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../Apps/MyApp.dart';
 
+import '../../Apps/Triboo.dart';
 
-class CustomConfiguration extends StatelessWidget {
+class CustomConfiguration extends StatefulWidget {
+  @override
+  _CustomConfigurationState createState() => _CustomConfigurationState();
+}
+
+class _CustomConfigurationState extends State<CustomConfiguration> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(

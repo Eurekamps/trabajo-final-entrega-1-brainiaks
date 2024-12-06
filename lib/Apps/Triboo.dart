@@ -1,6 +1,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
+
+
 import 'package:triboo/Views/HomeView.dart';
 import 'package:triboo/Views/HomerView.dart';
 import 'package:triboo/Views/LoginView.dart';
@@ -15,6 +18,8 @@ class Triboo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
 
+    final themeProvider = Provider.of<ThemeProvider>(context);  // Para el cambio de fondo entre claro y oscuro
+
     // Hay que definir un array de rutas
     Map<String,Widget Function(BuildContext)> rutasNavegacion ={
       '/SplashView':(context)=> SplashView(),
@@ -25,9 +30,12 @@ class Triboo extends StatelessWidget {
     };
 
     MaterialApp app = MaterialApp(title: "Triboo",
+
       routes: rutasNavegacion,
       initialRoute: '/SplashView',
+      theme: themeProvider.isDarkMode ? ThemeData.dark() : ThemeData.light(),
       debugShowCheckedModeBanner: false, // Oculta el banner de debug
+
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -50,5 +58,15 @@ class Triboo extends StatelessWidget {
     );
 
     return app;
+  }
+}
+
+// Proveedor de temas
+class ThemeProvider extends ChangeNotifier {
+  bool isDarkMode = false;
+
+  void toggleTheme() {
+    isDarkMode = !isDarkMode;
+    notifyListeners(); // Notificar a los widgets para que se actualicen
   }
 }

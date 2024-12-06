@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:triboo/Apps/Triboo.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:triboo/Views/SplashView.dart';
@@ -13,7 +14,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(Triboo());
+  runApp(ChangeNotifierProvider(
+    create: (_) => ThemeProvider(),
+    child: Triboo(),
+  ),
+  );
 }
 
 

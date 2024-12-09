@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:triboo/FBObjects/FbCommunity.dart';
 import 'package:triboo/FBObjects/FbPerfil.dart';
 
 import 'DataHolder.dart';
@@ -37,6 +38,28 @@ class FirebaseAdmin{
     }
     return ;
   }
+
+  //Sincronizar comunidades con Firebase
+  Future<void> syncCommunities() async {
+    try {
+      // Obtener todas las comunidades como documentos de Firestore
+      List<DocumentSnapshot<Map<String, dynamic>>>? communitiesSnapshot = await fetchFBDataList(
+        collectionPath: 'comunidades',
+      );
+      // Si se obtienen documentos, convertirlos a una lista de FbCommunity
+      if (communitiesSnapshot != null) {
+        List<FbCommunity> communities = communitiesSnapshot
+            .map((doc) => FbCommunity.fromFirestore(doc))
+            .toList();
+
+        // Sincronizar las comunidades con el DataHolder
+        DataHolder().syncCommunities(communities);
+      }
+    } catch (e) {
+      print("Error al sincronizar comunidades desde Firebase: $e");
+    }
+  }
+
 
 
   /// Función genérica para obtener un documento específico desde Firestore.

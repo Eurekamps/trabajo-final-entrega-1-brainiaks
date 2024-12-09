@@ -3,10 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:triboo/Statics/FirebaseAdmin.dart';
 
 
+import '../FBObjects/FbCommunity.dart';
 import '../FBObjects/FbPerfil.dart';
 
 class DataHolder {
   static final DataHolder _dataHolder = DataHolder._internal();
+  // lista de comunidades
+  List<FbCommunity> _communities = [];
 
   FbPerfil? userProfile;
   FirebaseAdmin fbAdmin = FirebaseAdmin();
@@ -57,5 +60,19 @@ class DataHolder {
     } catch (e) {
       onError('Error al guardar el perfil: $e');
     }
+  }
+  // metodos para las comunidades
+
+  //obtener lista de comunidades
+  List<FbCommunity> get communities => _communities;
+
+  //reemplazar lista de comunidades
+  set communities(List<FbCommunity> value){
+    _communities = value;
+  }
+
+  // agregar comunidades
+  void addCommunities(FbCommunity communities){
+    _communities.add(communities);
   }
 }

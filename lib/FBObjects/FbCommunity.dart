@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class FbCommunity {
 
   String id; // UID de la comunidad
@@ -6,6 +8,7 @@ class FbCommunity {
   List<String> uidParticipants; // Lista de UIDS de los participantes
   String name; //nombre de la comunidad
   String description; //Descripcion de la comunidad
+  String avatar; // foto de comunidad
 
   FbCommunity({
     required this.id,
@@ -13,20 +16,24 @@ class FbCommunity {
     required this.uidModders,
     required this.uidParticipants,
     required this.name,
-    required this.description
+    required this.description,
+    required this.avatar
 });
 
   //instancia de FbCommunity
-  factory FbCommunity.fromFirestore(Map<String, dynamic> data, String id){
+  factory FbCommunity.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot) {
+    final data = snapshot.data(); // Obtiene los datos del documento
     return FbCommunity(
-        id: id,
-        uidCreator: data ['uidCreator'],
-        uidModders: data ['uidModders'],
-        uidParticipants: data ['uidParticipants'],
-        name: data ['name'],
-        description: data ['description']
+      id: snapshot.id, // Accede al ID del documento
+      uidCreator: data?['uidCreator'],
+      uidModders: data?['uidModders'],
+      uidParticipants: data?['uidParticipants'],
+      name: data?['name'],
+      description: data?['description'],
+      avatar: data?['avatar'],
     );
   }
+
   //Convierte esta instancia a un mapa para guardar en Firestore
   Map<String, dynamic> toFirestore(){
     return {
@@ -35,6 +42,7 @@ class FbCommunity {
       'uidParticipants': uidParticipants,
       'name': name,
       'description': description,
+      'avatar': avatar
     };
   }
 }

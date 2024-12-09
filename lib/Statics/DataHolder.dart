@@ -97,7 +97,7 @@ class DataHolder {
     }
   }
   // Sincronizar comunidades desde Firebase
-  Future<void> sincronizarComunidades(List<FbCommunity> communitiesFirebase) async {
+  Future<void> syncCommunities(List<FbCommunity> communitiesFirebase) async {
     _communities = communitiesFirebase;
   }
 }

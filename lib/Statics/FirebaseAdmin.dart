@@ -51,7 +51,6 @@ class FirebaseAdmin{
         List<FbCommunity> communities = communitiesSnapshot
             .map((doc) => FbCommunity.fromFirestore(doc))
             .toList();
-
         // Sincronizar las comunidades con el DataHolder
         DataHolder().syncCommunities(communities);
       }
@@ -59,7 +58,44 @@ class FirebaseAdmin{
       print("Error al sincronizar comunidades desde Firebase: $e");
     }
   }
+  //agregar una nueva comunidad
+  Future<void> addCommunity(FbCommunity community) async{
+    try{
+      await saveFBData(
+        collectionPath: 'communities',
+        data: community.toFirestore(),
+      );
+      print("Community added successfully");
+      DataHolder().addCommunities(community);
+    }catch (e){
+      print("Error adding community: $e");
+    }
+  }
 
+  // Actualizar una comunidad existente en Firestore y en el DataHolder
+  Future<void> updateCommunity(FbCommunity community) async {
+    try {
+      await saveFBData(
+        collectionPath: 'communities',
+        data: community.toFirestore(),
+        docId: community.id,  // Usamos el id para actualizar
+      );
+      print("Community updated successfully");
+      DataHolder().updateCommunity(community);
+    } catch (e) {
+      print("Error updating community: $e");
+    }
+  }
+  // Eliminar una comunidad de Firestore y del DataHolder
+  Future<void> deleteCommunity(String communityId) async {
+    try {
+      await FirebaseFirestore.instance.collection('communities').doc(communityId).delete();
+      print("Community deleted successfully");
+      DataHolder().deleteCommunity(communityId);
+    } catch (e) {
+      print("Error deleting community: $e");
+    }
+  }
 
 
   /// Función genérica para obtener un documento específico desde Firestore.

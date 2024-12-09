@@ -9,7 +9,7 @@ import '../FBObjects/FbPerfil.dart';
 class DataHolder {
   static final DataHolder _dataHolder = DataHolder._internal();
   // lista de comunidades
-  List<FbCommunity> _communities = [];
+
 
   FbPerfil? userProfile;
   FirebaseAdmin fbAdmin = FirebaseAdmin();
@@ -62,7 +62,7 @@ class DataHolder {
     }
   }
   // metodos para las comunidades
-
+  List<FbCommunity> _communities = [];
   //obtener lista de comunidades
   List<FbCommunity> get communities => _communities;
 

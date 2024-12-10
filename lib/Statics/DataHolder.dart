@@ -3,10 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:triboo/Statics/FirebaseAdmin.dart';
 
 
+import '../FBObjects/FbCommunity.dart';
 import '../FBObjects/FbPerfil.dart';
 
 class DataHolder {
   static final DataHolder _dataHolder = DataHolder._internal();
+  // lista de comunidades
+
 
   FbPerfil? userProfile;
   FirebaseAdmin fbAdmin = FirebaseAdmin();
@@ -57,5 +60,44 @@ class DataHolder {
     } catch (e) {
       onError('Error al guardar el perfil: $e');
     }
+  }
+  // metodos para las comunidades
+  List<FbCommunity> _communities = [];
+  //obtener lista de comunidades
+  List<FbCommunity> get communities => _communities;
+
+  //reemplazar lista de comunidades
+  set communities(List<FbCommunity> value){
+    _communities = value;
+  }
+
+  // agregar comunidades
+  void addCommunities(FbCommunity communities){
+    _communities.add(communities);
+  }
+  // Actualizar una comunidad existente
+  void updateCommunity(FbCommunity communities) {
+    final index = _communities.indexWhere((c) => c.id == communities.id);
+    if (index != -1) {
+      _communities[index] = communities;
+    }
+  }
+  // Eliminar una comunidad por ID
+  void deleteCommunity(String id) {
+    _communities.removeWhere((c) => c.id == id);
+  }
+  // Obtener una comunidad específica por ID
+  FbCommunity? getCommunityById(String id) {
+    try {
+      return _communities.firstWhere(
+            (c) => c.id == id, // Condición para buscar la comunidad
+      );
+    } catch (e) {
+      return null; // Si no se encuentra, se captura la excepción y devuelve null
+    }
+  }
+  // Sincronizar comunidades desde Firebase
+  Future<void> syncCommunities(List<FbCommunity> communitiesFirebase) async {
+    _communities = communitiesFirebase;
   }
 }

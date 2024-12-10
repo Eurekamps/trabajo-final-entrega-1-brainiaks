@@ -18,7 +18,7 @@ class _LoginViewState extends State<LoginView> {
 
   void clickLog() async {
 
-    await DataHolder().fbAdmin.logIn( tecUser.text, tecPass.text);
+    await DataHolder().fbAdmin.logIn( email: tecUser.text, password: tecPass.text);
 
     if (DataHolder().userProfile == null) {
       // Si no existe perfil, redirige al ProfileUserView

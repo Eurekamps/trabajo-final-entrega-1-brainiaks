@@ -10,7 +10,7 @@ class CommunityView extends StatefulWidget {
 }
 
 class _CommunityViewState extends State<CommunityView> {
-  final FirebaseAdmin _firebaseAdmin = FirebaseAdmin();  // Instanciamos FirebaseAdmin
+  final FirebaseAdmin _firebaseAdmin = FirebaseAdmin();
   List<Map<String, dynamic>> createdCommunities = [];
   List<Map<String, dynamic>> joinedCommunities = [];
   List<Map<String, dynamic>> existingCommunities = [];
@@ -45,7 +45,7 @@ class _CommunityViewState extends State<CommunityView> {
       joinedCommunities = joinedCommunitiesData?.map((doc) => doc.data() as Map<String, dynamic>).toList() ?? [];
     });
 
-    // Cargar todas las comunidades disponibles (excepto las creadas o a las que ya pertenece)
+    // Cargar todas las comunidades disponibles
     var allCommunitiesData = await _firebaseAdmin.fetchFBDataList(
       collectionPath: 'comunidades',
     );
@@ -155,6 +155,23 @@ class _CommunityViewState extends State<CommunityView> {
                   ),
                   title: Text(community['name']),
                   subtitle: Text(community['description']),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.edit),
+                        onPressed: () {
+                          // Lógica de edición de la comunidad
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete),
+                        onPressed: () {
+                          // Lógica de eliminación de la comunidad
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               );
             },

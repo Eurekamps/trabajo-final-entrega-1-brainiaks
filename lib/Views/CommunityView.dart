@@ -2,229 +2,116 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../Statics/FirebaseAdmin.dart';
+
 class CommunityView extends StatefulWidget {
   @override
   State<CommunityView> createState() => _CommunityViewState();
 }
 
 class _CommunityViewState extends State<CommunityView> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String userId = FirebaseAuth.instance.currentUser!.uid;
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  bool isLoading = false;
-
-  List<Map<String, dynamic>> userCreatedCommunities = [];
-  List<Map<String, dynamic>> userJoinedCommunities = [];
+  final FirebaseAdmin _firebaseAdmin = FirebaseAdmin();  // Instanciamos FirebaseAdmin
+  List<Map<String, dynamic>> createdCommunities = [];
+  List<Map<String, dynamic>> joinedCommunities = [];
   List<Map<String, dynamic>> existingCommunities = [];
+
+  String? userId;
 
   @override
   void initState() {
     super.initState();
-    _loadCommunities(); // Cargar las comunidades al iniciar
+    _loadCommunities();
   }
 
-  // Función para cargar las comunidades
   Future<void> _loadCommunities() async {
+    // Asegúrate de tener el ID del usuario
+    userId = FirebaseAuth.instance.currentUser?.uid;
+
+    // Cargar las comunidades creadas por el usuario
+    var createdCommunitiesData = await _firebaseAdmin.fetchFBDataList(
+      collectionPath: 'comunidades',
+      filters: Filter('uidCreador', isEqualTo: userId),
+    );
     setState(() {
-      isLoading = true;
+      createdCommunities = createdCommunitiesData?.map((doc) => doc.data() as Map<String, dynamic>).toList() ?? [];
     });
 
-    try {
-      // Comunidades creadas por el usuario (filtrado por uidCreator)
-      final createdCommunitiesSnapshot = await _firestore
-          .collection('comunidades')
-          .where('uidCreator', isEqualTo: userId)
-          .get();
-
-      userCreatedCommunities = createdCommunitiesSnapshot.docs
-          .map((doc) => {
-        'id': doc.id, // Guardar el ID del documento
-        ...doc.data(),
-      })
-          .toList();
-
-      // Comunidades a las que el usuario se ha unido (filtrado por uidParticipants)
-      final joinedCommunitiesSnapshot = await _firestore
-          .collection('comunidades')
-          .where('uidParticipants', arrayContains: userId)
-          .get();
-
-      userJoinedCommunities = joinedCommunitiesSnapshot.docs
-          .map((doc) => {
-        'id': doc.id, // Guardar el ID del documento
-        ...doc.data(),
-      })
-          .toList();
-
-      // Filtramos las comunidades a las que el usuario pertenece,
-      // eliminando aquellas que el usuario haya creado
-      userJoinedCommunities.removeWhere((community) =>
-          userCreatedCommunities.any((createdCommunity) => createdCommunity['id'] == community['id'])
-      );
-
-      // Comunidades existentes: Excluimos las comunidades que el usuario ya ha creado o a las que se ha unido
-      existingCommunities = createdCommunitiesSnapshot.docs
-          .map((doc) => {
-        'id': doc.id, // Guardar el ID del documento
-        ...doc.data(),
-      })
-          .toList();
-
-      existingCommunities.removeWhere((community) =>
-      userJoinedCommunities.any((joinedCommunity) => joinedCommunity['id'] == community['id']) ||
-          userCreatedCommunities.any((createdCommunity) => createdCommunity['id'] == community['id'])
-      );
-
-    } catch (e) {
-      print("Error cargando comunidades: $e");
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  // Función para agregar una comunidad
-  Future<void> _addCommunity() async {
-    final newCommunity = {
-      'name': _nameController.text.trim(),
-      'description': _descriptionController.text.trim(),
-      'uidCreator': userId,
-      'uidModders': [userId], // El creador es moderador inicial
-      'uidParticipants': [userId], // El creador pertenece inicialmente
-      'avatar': '', // Avatar opcional
-    };
-
+    // Cargar las comunidades en las que el usuario está participando
+    var joinedCommunitiesData = await _firebaseAdmin.fetchFBDataList(
+      collectionPath: 'comunidades',
+      filters: Filter('uidParticipants', arrayContains: userId),
+    );
     setState(() {
-      isLoading = true;
+      joinedCommunities = joinedCommunitiesData?.map((doc) => doc.data() as Map<String, dynamic>).toList() ?? [];
     });
 
-    try {
-      await _firestore.collection('comunidades').add(newCommunity);
-      await _loadCommunities(); // Recargar las comunidades
-      print("Comunidad creada exitosamente.");
-    } catch (e) {
-      print("Error al crear comunidad: $e");
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
+    // Cargar todas las comunidades disponibles (excepto las creadas o a las que ya pertenece)
+    var allCommunitiesData = await _firebaseAdmin.fetchFBDataList(
+      collectionPath: 'comunidades',
+    );
+    setState(() {
+      existingCommunities = allCommunitiesData?.map((doc) => doc.data() as Map<String, dynamic>).toList() ?? [];
+    });
+
+    // Filtrar las comunidades que no han sido creadas por el usuario ni a las que ya pertenece
+    existingCommunities.removeWhere((community) => createdCommunities.contains(community) || joinedCommunities.contains(community));
   }
 
-  // Función para editar una comunidad
-  Future<void> _editCommunity(Map<String, dynamic> community, String docId) async {
-    _nameController.text = community['name'];
-    _descriptionController.text = community['description'];
-
+  // Mostrar el cuadro de diálogo para crear una comunidad
+  void _showAddCommunityDialog() {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (context) {
+        String communityName = '';
+        String communityDescription = '';
+
         return AlertDialog(
-          title: Text("Editar Comunidad"),
+          title: Text('Crear Comunidad'),
           content: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                controller: _nameController,
-                decoration: InputDecoration(labelText: "Nombre de la Comunidad"),
+                decoration: InputDecoration(labelText: 'Nombre de la Comunidad'),
+                onChanged: (value) {
+                  setState(() {
+                    communityName = value;
+                  });
+                },
               ),
               TextField(
-                controller: _descriptionController,
-                decoration: InputDecoration(labelText: "Descripción"),
+                decoration: InputDecoration(labelText: 'Descripción'),
+                onChanged: (value) {
+                  setState(() {
+                    communityDescription = value;
+                  });
+                },
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.pop(context);
               },
-              child: Text("Cancelar"),
+              child: Text('Cancelar'),
             ),
-            ElevatedButton(
+            TextButton(
               onPressed: () async {
-                final updatedCommunity = {
-                  'name': _nameController.text.trim(),
-                  'description': _descriptionController.text.trim(),
-                  'uidCreator': community['uidCreator'],
-                  'uidModders': community['uidModders'],
-                  'uidParticipants': community['uidParticipants'],
-                  'avatar': community['avatar'],
+                // Crear comunidad
+                final communityData = {
+                  'name': communityName,
+                  'description': communityDescription,
+                  'uidCreador': userId,
+                  'uidParticipants': [userId],  // El creador es el primer participante
                 };
 
-                try {
-                  await _firestore.collection('comunidades').doc(docId).update(updatedCommunity);
-                  await _loadCommunities(); // Recargar comunidades
-                  print("Comunidad actualizada exitosamente.");
-                } catch (e) {
-                  print("Error al actualizar comunidad: $e");
-                }
-                Navigator.of(context).pop(); // Cerrar el diálogo
+                await _firebaseAdmin.saveFBData(
+                  collectionPath: 'comunidades',
+                  data: communityData,
+                );
+                await _loadCommunities(); // Recargar las comunidades después de crearla
+                Navigator.pop(context); // Cerrar el cuadro de diálogo
               },
-              child: Text("Actualizar"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // Función para eliminar una comunidad
-  Future<void> _deleteCommunity(String docId) async {
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      await _firestore.collection('comunidades').doc(docId).delete();
-      await _loadCommunities(); // Recargar comunidades
-      print("Comunidad eliminada exitosamente.");
-    } catch (e) {
-      print("Error al eliminar comunidad: $e");
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  // Mostrar cuadro de diálogo para agregar comunidad
-  void _showAddCommunityDialog() {
-    _nameController.clear();
-    _descriptionController.clear();
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Agregar Comunidad"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _nameController,
-                decoration: InputDecoration(labelText: "Nombre de la Comunidad"),
-              ),
-              TextField(
-                controller: _descriptionController,
-                decoration: InputDecoration(labelText: "Descripción"),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Cerrar el diálogo
-              },
-              child: Text("Cancelar"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                await _addCommunity();
-                Navigator.of(context).pop(); // Cerrar el diálogo
-              },
-              child: Text("Agregar"),
+              child: Text('Crear'),
             ),
           ],
         );
@@ -236,13 +123,11 @@ class _CommunityViewState extends State<CommunityView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Comunidades"),
+        title: Text('Comunidades'),
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : ListView(
+      body: ListView(
         children: [
-          // Sección de comunidades creadas por el usuario
+          // Mostrar las comunidades creadas por el usuario
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
@@ -250,7 +135,7 @@ class _CommunityViewState extends State<CommunityView> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
-          userCreatedCommunities.isEmpty
+          createdCommunities.isEmpty
               ? Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text("No has creado ninguna comunidad."),
@@ -258,11 +143,9 @@ class _CommunityViewState extends State<CommunityView> {
               : ListView.builder(
             shrinkWrap: true,
             physics: NeverScrollableScrollPhysics(),
-            itemCount: userCreatedCommunities.length,
+            itemCount: createdCommunities.length,
             itemBuilder: (context, index) {
-              final community = userCreatedCommunities[index];
-              final docId = community['id'];
-
+              final community = createdCommunities[index];
               return Card(
                 elevation: 4,
                 margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -272,33 +155,20 @@ class _CommunityViewState extends State<CommunityView> {
                   ),
                   title: Text(community['name']),
                   subtitle: Text(community['description']),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => _editCommunity(community, docId),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteCommunity(docId),
-                      ),
-                    ],
-                  ),
                 ),
               );
             },
           ),
 
-          // Sección de comunidades a las que el usuario se ha unido (excluyendo las que ha creado)
+          // Mostrar las comunidades en las que el usuario participa
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              "Comunidades a las que perteneces",
+              "Comunidades a las que Perteneces",
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
-          userJoinedCommunities.isEmpty
+          joinedCommunities.isEmpty
               ? Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text("No perteneces a ninguna comunidad."),
@@ -306,11 +176,9 @@ class _CommunityViewState extends State<CommunityView> {
               : ListView.builder(
             shrinkWrap: true,
             physics: NeverScrollableScrollPhysics(),
-            itemCount: userJoinedCommunities.length,
+            itemCount: joinedCommunities.length,
             itemBuilder: (context, index) {
-              final community = userJoinedCommunities[index];
-              final docId = community['id'];
-
+              final community = joinedCommunities[index];
               return Card(
                 elevation: 4,
                 margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -325,7 +193,7 @@ class _CommunityViewState extends State<CommunityView> {
             },
           ),
 
-          // Sección de comunidades existentes
+          // Mostrar las comunidades disponibles para unirse
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
@@ -363,10 +231,11 @@ class _CommunityViewState extends State<CommunityView> {
                       };
 
                       try {
-                        await _firestore
-                            .collection('comunidades')
-                            .doc(docId)
-                            .update(updatedCommunity);
+                        await _firebaseAdmin.saveFBData(
+                          collectionPath: 'comunidades',
+                          data: updatedCommunity,
+                          docId: docId,
+                        );
                         await _loadCommunities(); // Recargar comunidades
                         print("Te uniste a la comunidad.");
                       } catch (e) {
@@ -389,6 +258,7 @@ class _CommunityViewState extends State<CommunityView> {
     );
   }
 }
+
 
 
 

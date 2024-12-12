@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/scheduler.dart';
-
 import '../FBObjects/FbCommunity.dart';
+import '../Statics/DataHolder.dart';
 import '../Statics/FirebaseAdmin.dart';
 
 class CommunityView extends StatefulWidget {
@@ -14,9 +12,6 @@ class CommunityView extends StatefulWidget {
 class _CommunityViewState extends State<CommunityView> {
   final FirebaseAdmin _firebaseAdmin = FirebaseAdmin();
   String currentUserId = ""; // Variable para almacenar el UID del usuario actual
-  List<FbCommunity> _allCommunities = [];
-  List<FbCommunity> _createdCommunities = [];
-  List<FbCommunity> _joinedCommunities = [];
   bool _isLoading = true; // Indica si los datos están cargando
 
   @override
@@ -37,29 +32,12 @@ class _CommunityViewState extends State<CommunityView> {
     });
 
     try {
-      final snapshots = await _firebaseAdmin.fetchFBDataList(
-        collectionPath: 'comunidades',
-      );
+      // Sincronizar las comunidades desde Firebase al DataHolder
+      await DataHolder().syncCommunitiesFromFirebase(_firebaseAdmin);
 
-      if (snapshots != null) {
-        setState(() {
-          _allCommunities = snapshots
-              .map((doc) => FbCommunity.fromFirestore(doc))
-              .toList();
-
-          _createdCommunities = _allCommunities
-              .where((community) => community.uidCreator == currentUserId)
-              .toList();
-
-          _joinedCommunities = _allCommunities
-              .where((community) =>
-          community.uidParticipants.contains(currentUserId) &&
-              community.uidCreator != currentUserId)
-              .toList();
-
-          _isLoading = false;
-        });
-      }
+      setState(() {
+        _isLoading = false;
+      });
     } catch (e) {
       print('Error al cargar las comunidades: $e');
       setState(() {
@@ -74,7 +52,8 @@ class _CommunityViewState extends State<CommunityView> {
         collectionPath: 'comunidades',
         docId: id,
       );
-      _loadCommunities(); // Recargar comunidades después de borrar
+      DataHolder().removeCommunity(id); // Eliminar de DataHolder
+      setState(() {});
     } catch (e) {
       print('Error al eliminar la comunidad: $e');
     }
@@ -82,27 +61,61 @@ class _CommunityViewState extends State<CommunityView> {
 
   Future<void> _updateCommunity(String id, String newName, String newDescription) async {
     try {
-      final communityToUpdate = _allCommunities.firstWhere((community) => community.id == id);
+      // Buscar la comunidad en DataHolder
+      final communityToUpdate = DataHolder().allCommunities.firstWhere((community) => community.id == id);
 
+      // Crear una comunidad actualizada
       final updatedCommunity = FbCommunity(
-        id: communityToUpdate.id,
+        id: communityToUpdate.id, // Mantener el ID actual
         uidCreator: communityToUpdate.uidCreator,
         uidModders: communityToUpdate.uidModders,
         uidParticipants: communityToUpdate.uidParticipants,
-        name: newName,
-        description: newDescription,
-        avatar: communityToUpdate.avatar,
+        name: newName, // Actualizar el nombre
+        description: newDescription, // Actualizar la descripción
+        avatar: communityToUpdate.avatar, // Mantener el avatar
+      );
+
+      // Guardar los datos actualizados en Firestore
+      await _firebaseAdmin.saveFBData(
+        collectionPath: 'comunidades',
+        data: updatedCommunity.toFirestore(),
+        docId: updatedCommunity.id, // Usar el mismo ID
+      );
+
+      // Actualizar los datos locales en DataHolder
+     DataHolder().updateCommunity(updatedCommunity);
+
+      // Refrescar la UI
+      setState(() {});
+
+      print('Comunidad actualizada correctamente');
+    } catch (e) {
+      print('Error al actualizar la comunidad: $e');
+    }
+  }
+
+
+  Future<void> _createCommunity(String name, String description) async {
+    try {
+      final newCommunity = FbCommunity(
+        id: '', // ID generado por Firestore
+        uidCreator: currentUserId,
+        uidModders: '',
+        uidParticipants: [],
+        name: name,
+        description: description,
+        avatar: '',
       );
 
       await _firebaseAdmin.saveFBData(
         collectionPath: 'comunidades',
-        data: updatedCommunity.toFirestore(),
-        docId: id,
+        data: newCommunity.toFirestore(),
       );
 
-      _loadCommunities();
+      DataHolder().addCommunity(newCommunity); // Agregar a DataHolder
+      setState(() {});
     } catch (e) {
-      print('Error al actualizar la comunidad: $e');
+      print('Error al crear la comunidad: $e');
     }
   }
 
@@ -150,80 +163,10 @@ class _CommunityViewState extends State<CommunityView> {
     );
   }
 
-  void _showCreateCommunityDialog() {
-    final nameController = TextEditingController();
-    final descriptionController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Crear Comunidad'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: 'Nombre de la comunidad'),
-              ),
-              TextField(
-                controller: descriptionController,
-                decoration: InputDecoration(labelText: 'Descripción de la comunidad'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final name = nameController.text.trim();
-                final description = descriptionController.text.trim();
-                if (name.isNotEmpty && description.isNotEmpty) {
-                  _createCommunity(name, description);
-                  Navigator.pop(context);
-                }
-              },
-              child: Text('Crear'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _createCommunity(String name, String description) async {
-    try {
-      final newCommunity = FbCommunity(
-        id: '', // ID generado por Firestore
-        uidCreator: currentUserId,
-        uidModders: '',
-        uidParticipants: [],
-        name: name,
-        description: description,
-        avatar: '',
-      );
-
-      await _firebaseAdmin.saveFBData(
-        collectionPath: 'comunidades',
-        data: newCommunity.toFirestore(),
-      );
-
-      _loadCommunities();
-    } catch (e) {
-      print('Error al crear la comunidad: $e');
-    }
-  }
-
   Widget _buildCommunitySection({
     required String title,
     required List<FbCommunity> communities,
     required bool showEditAndDelete,
-    required Widget? actionButtons(FbCommunity community),
   }) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -254,26 +197,34 @@ class _CommunityViewState extends State<CommunityView> {
                     children: [
                       IconButton(
                         icon: Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () =>
-                            _showEditCommunityDialog(community),
+                        onPressed: () => _showEditCommunityDialog(community),
                       ),
                       IconButton(
                         icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () =>
-                            _deleteCommunity(community.id),
+                        onPressed: () => _deleteCommunity(community.id),
                       ),
                     ],
                   )
-                      : ElevatedButton(
-                    onPressed: () => _joinCommunity(community),
-                    child: Text('Unirse'),
-                  ),
+                      : _buildJoinButton(community),
                 ),
               );
             },
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildJoinButton(FbCommunity community) {
+    final isUserParticipant = community.uidParticipants.contains(currentUserId);
+
+    if (isUserParticipant) {
+      return SizedBox.shrink();
+    }
+
+    return ElevatedButton(
+      onPressed: () => _joinCommunity(community),
+      child: Text('Unirse'),
     );
   }
 
@@ -285,7 +236,8 @@ class _CommunityViewState extends State<CommunityView> {
         data: community.toFirestore(),
         docId: community.id,
       );
-      _loadCommunities();
+      DataHolder().addCommunity(community); // Actualizar en DataHolder
+      setState(() {});
     } catch (e) {
       print('Error al unirse a la comunidad: $e');
     }
@@ -305,22 +257,22 @@ class _CommunityViewState extends State<CommunityView> {
           children: [
             _buildCommunitySection(
               title: 'Mis Comunidades',
-              communities: _createdCommunities,
-              showEditAndDelete: true, actionButtons: (FbCommunity community) {  },
+              communities: DataHolder().createdCommunities,
+              showEditAndDelete: true,
             ),
             _buildCommunitySection(
               title: 'Comunidades a las que pertenezco',
-              communities: _joinedCommunities,
-              showEditAndDelete: false, actionButtons: (FbCommunity community) {  },
+              communities: DataHolder().joinedCommunities,
+              showEditAndDelete: false,
             ),
             _buildCommunitySection(
               title: 'Comunidades Existentes',
-              communities: _allCommunities
+              communities: DataHolder().allCommunities
                   .where((community) =>
               !community.uidParticipants.contains(currentUserId) &&
                   community.uidCreator != currentUserId)
                   .toList(),
-              showEditAndDelete: false, actionButtons: (FbCommunity community) {  },
+              showEditAndDelete: false,
             ),
           ],
         ),
@@ -332,7 +284,54 @@ class _CommunityViewState extends State<CommunityView> {
       ),
     );
   }
+
+  void _showCreateCommunityDialog() {
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Crear Comunidad'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(labelText: 'Nombre de la comunidad'),
+              ),
+              TextField(
+                controller: descriptionController,
+                decoration: InputDecoration(labelText: 'Descripción de la comunidad'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameController.text.trim();
+                final description = descriptionController.text.trim();
+                if (name.isNotEmpty && description.isNotEmpty) {
+                  _createCommunity(name, description);
+                  Navigator.pop(context);
+                }
+              },
+              child: Text('Crear'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
+
+
+
 
 
 

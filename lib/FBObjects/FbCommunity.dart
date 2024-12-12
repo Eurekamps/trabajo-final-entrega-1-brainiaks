@@ -38,6 +38,7 @@ class FbCommunity {
   // Convierte esta instancia a un mapa para guardar en Firestore
   Map<String, dynamic> toFirestore() {
     return {
+      'id':id,
       'uidCreator': uidCreator,
       'uidModders': uidModders,
       'uidParticipants': uidParticipants,

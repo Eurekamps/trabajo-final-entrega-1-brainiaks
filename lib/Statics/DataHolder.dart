@@ -102,6 +102,23 @@ class DataHolder {
     _createdCommunities.removeWhere((c) => c.id == communityId);
     _joinedCommunities.removeWhere((c) => c.id == communityId);
   }
+// Actualiza en local
+  void updateCommunity(FbCommunity updatedCommunity) {
+    final index = allCommunities.indexWhere((community) => community.id == updatedCommunity.id);
+    if (index != -1) {
+      allCommunities[index] = updatedCommunity;
+    }
+
+    final createdIndex = createdCommunities.indexWhere((community) => community.id == updatedCommunity.id);
+    if (createdIndex != -1) {
+      createdCommunities[createdIndex] = updatedCommunity;
+    }
+
+    final joinedIndex = joinedCommunities.indexWhere((community) => community.id == updatedCommunity.id);
+    if (joinedIndex != -1) {
+      joinedCommunities[joinedIndex] = updatedCommunity;
+    }
+  }
 
   // Sincronizar comunidades desde Firebase
   Future<void> syncCommunitiesFromFirebase(FirebaseAdmin firebaseAdmin) async {

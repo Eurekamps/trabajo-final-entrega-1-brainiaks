@@ -3,6 +3,7 @@ import 'package:triboo/Views/CommunityView.dart';
 import 'package:triboo/Views/Customs/CustomDrawer.dart';
 import 'package:triboo/Views/LoginView.dart';
 
+import '../Statics/DataHolder.dart';
 import 'HomeView.dart';
 
 class HomerView extends StatefulWidget {
@@ -12,6 +13,8 @@ class HomerView extends StatefulWidget {
 
 class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+
+  bool _isLoading = true;
 
   final Widget _farLeftScreen = HomeView();
   final Widget _centerLeftScreen = HomeView();
@@ -28,12 +31,33 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
     _tabController.addListener(() {
       setState(() {});
     });
+    _loadCommunities();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCommunities() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Sincronizar las comunidades desde Firebase al DataHolder
+      await DataHolder().syncCommunitiesFromFirebase();
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error al cargar las comunidades: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -52,11 +76,11 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
             child: TabBarView(
               controller: _tabController,
               children: [
-                Center(child: _farLeftScreen),
-                Center(child: _centerLeftScreen),
-                Center(child: _trueCenterScreen),
-                Center(child: _centerRightScreen),
-                Center(child: _farRightScreen),
+                Center(child:_isLoading ? Center(child: CircularProgressIndicator()) : _farLeftScreen),
+                Center(child:_isLoading ? Center(child: CircularProgressIndicator()) : _centerLeftScreen),
+                Center(child:_isLoading ? Center(child: CircularProgressIndicator()) : _trueCenterScreen),
+                Center(child:_isLoading ? Center(child: CircularProgressIndicator()) : _centerRightScreen),
+                Center(child:_isLoading ? Center(child: CircularProgressIndicator()) : _farRightScreen),
               ],
             ),
           ),

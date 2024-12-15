@@ -20,31 +20,11 @@ class _CommunityViewState extends State<CommunityView> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       currentUserId = user.uid; // Asignar el UID del usuario actual
-      _loadCommunities();
     } else {
       print('No hay usuario autenticado');
     }
   }
 
-  Future<void> _loadCommunities() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // Sincronizar las comunidades desde Firebase al DataHolder
-      await DataHolder().syncCommunitiesFromFirebase();
-
-      setState(() {
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('Error al cargar las comunidades: $e');
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
 
   Future<void> _deleteCommunity(String id) async {
     try {
@@ -249,9 +229,7 @@ class _CommunityViewState extends State<CommunityView> {
       appBar: AppBar(
         title: Text('Comunidades'),
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+      body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

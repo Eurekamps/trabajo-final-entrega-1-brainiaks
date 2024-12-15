@@ -74,6 +74,13 @@ class DataHolder {
 
   List<FbCommunity> get joinedCommunities => _joinedCommunities;
 
+  List<FbCommunity> get myCommunities {
+    List<FbCommunity> combined = [];
+    combined.addAll(_joinedCommunities);
+    combined.addAll(_createdCommunities);
+    return combined;
+  }
+
   // Actualizar las comunidades
   void setCommunities(List<FbCommunity> communities) {
     _allCommunities = communities;

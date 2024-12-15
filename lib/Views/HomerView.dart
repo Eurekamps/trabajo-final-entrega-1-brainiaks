@@ -13,7 +13,7 @@ class HomerView extends StatefulWidget {
 class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final Widget _farLeftScreen = LoginView();
+  final Widget _farLeftScreen = HomeView();
   final Widget _centerLeftScreen = HomeView();
   final Widget _trueCenterScreen = HomeView();
   final Widget _centerRightScreen = HomeView();

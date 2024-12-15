@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:triboo/FBObjects/FbPerfil.dart';
+import 'package:triboo/Statics/DataHolder.dart';
 
 class SplashView extends StatefulWidget {
   @override
@@ -38,9 +40,27 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
       await Future.delayed(Duration(milliseconds: 100));
     }
 
-    if (FirebaseAuth.instance.currentUser != null) {
+    FirebaseAuth.instance.authStateChanges().first.then((user) async {
+      if (user != null) {
+        await _loadUser();
+      } else {
+        Navigator.of(context).pushReplacementNamed("/LoginView");
+      }
+    }).catchError((e) {
+      print("Error detecting auth state: $e");
+      Navigator.of(context).pushReplacementNamed("/LoginView");
+    });
+
+  }
+
+  Future<void> _loadUser() async{
+
+    final snapshot = await DataHolder().fbAdmin.fetchFBData(collectionPath: "users", docId: FirebaseAuth.instance.currentUser!.uid);
+
+    if(snapshot != null){
+      DataHolder().userProfile = FbPerfil.fromFirestore(snapshot, null);
       Navigator.of(context).pushReplacementNamed("/HomeView");
-    } else {
+    }else{
       Navigator.of(context).pushReplacementNamed("/LoginView");
     }
   }

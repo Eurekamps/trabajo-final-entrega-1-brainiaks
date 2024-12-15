@@ -27,7 +27,7 @@ class DataHolder {
   }
 
   // Método para obtener el perfil de usuario desde Firestore
-  Future<bool> getUserProfile(String userId) async {
+ /* Future<bool> getUserProfile(String userId) async {
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('profiles')
@@ -48,7 +48,7 @@ class DataHolder {
       userProfile = null;
       return false;
     }
-  }
+  }*/
 
   // Método para guardar el perfil del usuario y usar un callback para manejar el error
   Future<void> saveUserProfile(FbPerfil perfil, String s,
@@ -121,8 +121,8 @@ class DataHolder {
   }
 
   // Sincronizar comunidades desde Firebase
-  Future<void> syncCommunitiesFromFirebase(FirebaseAdmin firebaseAdmin) async {
-    final snapshots = await firebaseAdmin.fetchFBDataList(collectionPath: 'comunidades');
+  Future<void> syncCommunitiesFromFirebase() async {
+    final snapshots = await fbAdmin.fetchFBDataList(collectionPath: 'comunidades');
     if (snapshots != null) {
       final communities = snapshots.map((doc) => FbCommunity.fromFirestore(doc)).toList();
       setCommunities(communities);

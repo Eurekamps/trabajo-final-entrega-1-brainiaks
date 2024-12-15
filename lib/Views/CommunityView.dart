@@ -10,7 +10,7 @@ class CommunityView extends StatefulWidget {
 }
 
 class _CommunityViewState extends State<CommunityView> {
-  final FirebaseAdmin _firebaseAdmin = FirebaseAdmin();
+  final FirebaseAdmin _firebaseAdmin = DataHolder().fbAdmin;
   String currentUserId = ""; // Variable para almacenar el UID del usuario actual
   bool _isLoading = true; // Indica si los datos están cargando
 
@@ -33,7 +33,7 @@ class _CommunityViewState extends State<CommunityView> {
 
     try {
       // Sincronizar las comunidades desde Firebase al DataHolder
-      await DataHolder().syncCommunitiesFromFirebase(_firebaseAdmin);
+      await DataHolder().syncCommunitiesFromFirebase();
 
       setState(() {
         _isLoading = false;

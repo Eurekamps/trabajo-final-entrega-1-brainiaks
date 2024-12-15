@@ -16,9 +16,8 @@ class _CustomDrawerState extends State<CustomDrawer> {
   @override
   void initState() {
     super.initState();
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null) {
-      _profileLoadedFuture = _loadUserProfile(userId);
+    if (DataHolder().userProfile != null) {
+      _profileLoadedFuture = Future.value(true);
     } else {
       _profileLoadedFuture = Future.value(false);
     }
@@ -130,13 +129,4 @@ class _CustomDrawerState extends State<CustomDrawer> {
     );
   }
 
-  Future<bool> _loadUserProfile(String userId) async {
-    try {
-      bool result = await DataHolder().getUserProfile(userId);
-      return result;
-    } catch (e) {
-      print('Error al cargar el perfil: $e');
-      return false;
-    }
-  }
 }

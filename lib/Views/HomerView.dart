@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:triboo/Views/CommunityView.dart';
 import 'package:triboo/Views/Customs/CustomDrawer.dart';
 import 'package:triboo/Views/LoginView.dart';
 
@@ -16,7 +17,7 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
   final Widget _centerLeftScreen = HomeView();
   final Widget _trueCenterScreen = HomeView();
   final Widget _centerRightScreen = HomeView();
-  final Widget _farRightScreen = HomeView();
+  final Widget _farRightScreen = CommunityView();
 
 
 

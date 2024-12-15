@@ -8,7 +8,11 @@ import '../FBObjects/FbPerfil.dart';
 
 class DataHolder {
   static final DataHolder _dataHolder = DataHolder._internal();
-  // lista de comunidades
+
+  // Lista de comunidades
+  List<FbCommunity> _allCommunities = [];
+  List<FbCommunity> _createdCommunities = [];
+  List<FbCommunity> _joinedCommunities = [];
 
 
   FbPerfil? userProfile;
@@ -47,7 +51,8 @@ class DataHolder {
   }
 
   // Método para guardar el perfil del usuario y usar un callback para manejar el error
-  Future<void> saveUserProfile(FbPerfil perfil, String s, Function(String) onError) async {
+  Future<void> saveUserProfile(FbPerfil perfil, String s,
+      Function(String) onError) async {
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
 
@@ -61,43 +66,66 @@ class DataHolder {
       onError('Error al guardar el perfil: $e');
     }
   }
-  // metodos para las comunidades
-  List<FbCommunity> _communities = [];
-  //obtener lista de comunidades
-  List<FbCommunity> get communities => _communities;
 
-  //reemplazar lista de comunidades
-  set communities(List<FbCommunity> value){
-    _communities = value;
+  // Obtener todas las comunidades
+  List<FbCommunity> get allCommunities => _allCommunities;
+
+  List<FbCommunity> get createdCommunities => _createdCommunities;
+
+  List<FbCommunity> get joinedCommunities => _joinedCommunities;
+
+  // Actualizar las comunidades
+  void setCommunities(List<FbCommunity> communities) {
+    _allCommunities = communities;
+    _createdCommunities = communities.where((c) => c.uidCreator ==
+        FirebaseAuth.instance.currentUser?.uid).toList();
+    _joinedCommunities = communities.where((c) =>
+        c.uidParticipants.contains(FirebaseAuth.instance.currentUser?.uid))
+        .toList();
   }
 
-  // agregar comunidades
-  void addCommunities(FbCommunity communities){
-    _communities.add(communities);
+  // Agregar una nueva comunidad
+  void addCommunity(FbCommunity community) {
+    _allCommunities.add(community);
+    if (community.uidCreator == FirebaseAuth.instance.currentUser?.uid) {
+      _createdCommunities.add(community);
+    }
+    if (community.uidParticipants.contains(
+        FirebaseAuth.instance.currentUser?.uid)) {
+      _joinedCommunities.add(community);
+    }
   }
-  // Actualizar una comunidad existente
-  void updateCommunity(FbCommunity communities) {
-    final index = _communities.indexWhere((c) => c.id == communities.id);
+
+  // Eliminar una comunidad
+  void removeCommunity(String communityId) {
+    _allCommunities.removeWhere((c) => c.id == communityId);
+    _createdCommunities.removeWhere((c) => c.id == communityId);
+    _joinedCommunities.removeWhere((c) => c.id == communityId);
+  }
+// Actualiza en local
+  void updateCommunity(FbCommunity updatedCommunity) {
+    final index = allCommunities.indexWhere((community) => community.id == updatedCommunity.id);
     if (index != -1) {
-      _communities[index] = communities;
+      allCommunities[index] = updatedCommunity;
+    }
+
+    final createdIndex = createdCommunities.indexWhere((community) => community.id == updatedCommunity.id);
+    if (createdIndex != -1) {
+      createdCommunities[createdIndex] = updatedCommunity;
+    }
+
+    final joinedIndex = joinedCommunities.indexWhere((community) => community.id == updatedCommunity.id);
+    if (joinedIndex != -1) {
+      joinedCommunities[joinedIndex] = updatedCommunity;
     }
   }
-  // Eliminar una comunidad por ID
-  void deleteCommunity(String id) {
-    _communities.removeWhere((c) => c.id == id);
-  }
-  // Obtener una comunidad específica por ID
-  FbCommunity? getCommunityById(String id) {
-    try {
-      return _communities.firstWhere(
-            (c) => c.id == id, // Condición para buscar la comunidad
-      );
-    } catch (e) {
-      return null; // Si no se encuentra, se captura la excepción y devuelve null
-    }
-  }
+
   // Sincronizar comunidades desde Firebase
-  Future<void> syncCommunities(List<FbCommunity> communitiesFirebase) async {
-    _communities = communitiesFirebase;
+  Future<void> syncCommunitiesFromFirebase(FirebaseAdmin firebaseAdmin) async {
+    final snapshots = await firebaseAdmin.fetchFBDataList(collectionPath: 'comunidades');
+    if (snapshots != null) {
+      final communities = snapshots.map((doc) => FbCommunity.fromFirestore(doc)).toList();
+      setCommunities(communities);
+    }
   }
 }

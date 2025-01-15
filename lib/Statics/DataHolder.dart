@@ -14,6 +14,8 @@ class DataHolder {
   List<FbCommunity> _createdCommunities = [];
   List<FbCommunity> _joinedCommunities = [];
 
+  late FbCommunity selectedCommunity;
+
 
   FbPerfil? userProfile;
   FirebaseAdmin fbAdmin = FirebaseAdmin();

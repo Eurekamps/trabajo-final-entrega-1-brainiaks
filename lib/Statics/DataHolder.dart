@@ -5,6 +5,7 @@ import 'package:triboo/Statics/FirebaseAdmin.dart';
 
 import '../FBObjects/FbCommunity.dart';
 import '../FBObjects/FbPerfil.dart';
+import '../FBObjects/FBPost.dart';
 
 class DataHolder {
   static final DataHolder _dataHolder = DataHolder._internal();
@@ -66,6 +67,29 @@ class DataHolder {
       }
     } catch (e) {
       onError('Error al guardar el perfil: $e');
+    }
+  }
+
+
+  // Gestión de publicaciones (FBPost)
+
+  // Guardar una publicación en Firebase (Diego)
+  Future<void> savePost(FBPost post, Function(String) onError) async {
+    try {
+      await FirebaseFirestore.instance.collection('posts').add(post.toFirestore());
+    } catch (e) {
+      onError('Error al guardar la publicación: $e');
+    }
+  }
+
+  // Sincronizar publicaciones desde Firebase (Diego)
+  Future<List<FBPost>> fetchPosts() async {
+    try {
+      final snapshots = await FirebaseFirestore.instance.collection('posts').get();
+      return snapshots.docs.map((doc) => FBPost.fromFirestore(doc, null)).toList();
+    } catch (e) {
+      print('Error al sincronizar publicaciones: $e');
+      return [];
     }
   }
 

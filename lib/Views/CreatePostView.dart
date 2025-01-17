@@ -1,77 +1,74 @@
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io'; // Para manejar archivos locales en dispositivos
-import 'package:flutter/foundation.dart' show kIsWeb; // Para detectar si estamos en Flutter Web
-import 'package:cloud_firestore/cloud_firestore.dart'; // Para Firestore
-import '../FBObjects/FBPost.dart'; // Clase FBPost para manejar publicaciones
-import '../FBObjects/FbPerfil.dart'; // Clase FbPerfil para representar el perfil del usuario
+import 'package:flutter/material.dart'; // Biblioteca para construir interfaces en Flutter
+import 'package:image_picker/image_picker.dart'; // Biblioteca para seleccionar imágenes desde la galería o cámara
+import 'dart:io'; // Para trabajar con archivos locales (en dispositivos no web)
+import 'package:flutter/foundation.dart' show kIsWeb; // Para detectar si estamos ejecutando en Flutter Web
+import 'package:cloud_firestore/cloud_firestore.dart'; // Biblioteca para conectar con Firebase Firestore (base de datos)
+import '../FBObjects/FBPost.dart'; // Clase personalizada para manejar publicaciones (FBPost)
+import '../FBObjects/FbPerfil.dart'; // Clase personalizada para manejar perfiles de usuario (FbPerfil)
 
-// Clase principal que define una vista para crear publicaciones
+// Clase principal que define la pantalla donde el usuario puede crear publicaciones
 class CreatePostView extends StatefulWidget {
-  final String autorID; // Identificador del usuario que crea la publicación
+  final String autorID; // Identificador del autor de las publicaciones (se pasa al crear la vista)
 
-  CreatePostView({required this.autorID}); // Constructor para recibir el ID del autor
+  CreatePostView({required this.autorID}); // Constructor que recibe el ID del autor
 
   @override
-  _CreatePostViewState createState() => _CreatePostViewState();
+  _CreatePostViewState createState() => _CreatePostViewState(); // Crea el estado asociado a esta pantalla
 }
 
-// Clase que gestiona el estado de CreatePostView
+// Clase que maneja el estado y el comportamiento de CreatePostView
 class _CreatePostViewState extends State<CreatePostView> {
-  // Controlador para el campo de texto donde el usuario escribe el contenido del post
+  // Controlador para el campo de texto donde el usuario escribe el contenido de la publicación
   final TextEditingController _textController = TextEditingController();
 
-  // Lista local para almacenar las publicaciones creadas por el usuario
+  // Lista local para almacenar las publicaciones (no conecta directamente con Firebase)
   final List<FBPost> _posts = [];
 
-  // Variable para almacenar la ruta de la imagen seleccionada antes de publicarla
+  // Ruta de la imagen seleccionada por el usuario (si existe)
   String? _selectedImagePath;
 
-  // Perfil del usuario actual (se puede inicializar desde Firebase o usar valores predeterminados)
+  // Perfil del usuario que está creando publicaciones
   late final FbPerfil _userProfile;
 
   @override
   void initState() {
     super.initState();
     // Inicialización del perfil del usuario con valores predeterminados
-    // Estos valores deberían reemplazarse por datos reales si están disponibles
     _userProfile = FbPerfil(
-      nombre: 'John Doe',
-      apodo: 'johnd',
-      imagenURL: 'https://example.com/profile.jpg',
-      cumple: '1990-01-01',
+      nombre: 'John Doe', // Nombre ficticio del usuario
+      apodo: 'johnd', // Apodo ficticio
+      imagenURL: 'https://example.com/profile.jpg', // URL ficticia para la imagen del perfil
+      cumple: '1990-01-01', // Fecha de cumpleaños ficticia
     );
   }
 
-  // Función para manejar el envío de una publicación
-  // Toma el texto y la imagen (si existe) y guarda la publicación en Firebase
+  // Función que envía una publicación a Firebase
   void _sendPost(String texto, String? imagePath) async {
-    final firestore = FirebaseFirestore.instance; // Instancia de Firestore
+    final firestore = FirebaseFirestore.instance; // Conexión a Firebase Firestore
 
-    // Crear un nuevo objeto FBPost con los datos del usuario y la publicación
+    // Crear un objeto FBPost con el texto, la imagen y la fecha de creación
     FBPost newPost = FBPost(
       texto: texto,
-      imagenURL: imagePath,
-      fechaCreacion: DateTime.now(),
-      autorID: widget.autorID, // Se utiliza el ID del autor proporcionado al crear la vista
+      imagenURL: imagePath, // URL o ruta de la imagen (puede ser nula)
+      fechaCreacion: DateTime.now(), // Fecha actual
+      autorID: widget.autorID, // ID del autor (pasado al crear esta vista)
     );
 
     // Guardar la publicación en la colección "posts" de Firebase
     await firestore.collection('posts').add(newPost.toFirestore());
 
-    // Actualizar la lista local de publicaciones para reflejar la nueva publicación
+    // Actualizar el estado para incluir la nueva publicación en la lista local
     setState(() {
       _posts.add(newPost);
-      _selectedImagePath = null; // Limpiar la previsualización de imagen
+      _selectedImagePath = null; // Limpiar la selección de imagen
     });
   }
 
-  // Función para abrir un modal que permite al usuario crear una nueva publicación
+  // Función que muestra un modal para crear una nueva publicación
   Future<void> _openPostModal() async {
-    String message = ''; // Variable para almacenar el texto del mensaje
-    _selectedImagePath = null; // Limpiar cualquier selección previa de imagen
+    String message = ''; // Almacena el texto escrito por el usuario
+    _selectedImagePath = null; // Limpia cualquier selección previa de imagen
 
-    // Mostrar un cuadro de diálogo donde el usuario puede escribir y seleccionar una imagen
     await showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -80,20 +77,20 @@ class _CreatePostViewState extends State<CreatePostView> {
             builder: (BuildContext context, StateSetter setState) {
               return SingleChildScrollView(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min, // Asegura que el modal no ocupe toda la pantalla
+                  mainAxisSize: MainAxisSize.min, // Evita que el modal ocupe toda la pantalla
                   children: [
-                    // Campo de texto para ingresar el contenido del post
+                    // Campo de texto donde el usuario escribe el contenido de la publicación
                     TextField(
                       controller: _textController,
                       decoration: InputDecoration(
-                        hintText: 'Escribe algo...', // Sugerencia para el usuario
-                        border: OutlineInputBorder(), // Borde para el campo de texto
+                        hintText: 'Escribe algo...', // Texto de sugerencia
+                        border: OutlineInputBorder(), // Estilo del borde
                       ),
                       onChanged: (value) {
-                        message = value; // Actualizar el mensaje con lo que escribe el usuario
+                        message = value; // Actualiza el mensaje mientras el usuario escribe
                       },
                     ),
-                    const SizedBox(height: 10), // Espaciador vertical
+                    const SizedBox(height: 10), // Espacio entre elementos
 
                     // Muestra una previsualización de la imagen seleccionada (si existe)
                     if (_selectedImagePath != null)
@@ -102,40 +99,40 @@ class _CreatePostViewState extends State<CreatePostView> {
                         _selectedImagePath!, // Mostrar imagen desde URL en Flutter Web
                         height: 100,
                         width: 100,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.cover, // Ajustar imagen al espacio
                       )
                           : Image.file(
-                        File(_selectedImagePath!), // Mostrar imagen desde archivo local
+                        File(_selectedImagePath!), // Mostrar imagen local en dispositivos
                         height: 100,
                         width: 100,
                         fit: BoxFit.cover,
                       ),
                     const SizedBox(height: 10),
 
-                    // Botones para seleccionar una imagen y enviar el post
+                    // Fila con botones para seleccionar una imagen y publicar
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween, // Alineación uniforme
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Botón para abrir la galería y seleccionar una imagen
+                        // Botón para seleccionar una imagen desde la galería
                         IconButton(
-                          icon: Icon(Icons.photo), // Ícono de foto
+                          icon: Icon(Icons.photo), // Icono de una foto
                           onPressed: () async {
-                            final picker = ImagePicker(); // Instancia de ImagePicker
+                            final picker = ImagePicker(); // Inicializa el selector de imágenes
                             final pickedFile = await picker.pickImage(
-                                source: ImageSource.gallery); // Selección desde galería
+                                source: ImageSource.gallery); // Abre la galería
                             if (pickedFile != null) {
                               setState(() {
-                                _selectedImagePath = pickedFile.path; // Guardar la ruta de la imagen
+                                _selectedImagePath = pickedFile.path; // Guarda la ruta de la imagen
                               });
                             }
                           },
                         ),
-                        // Botón para publicar el mensaje y cerrar el modal
+                        // Botón para publicar el contenido y cerrar el modal
                         ElevatedButton(
                           onPressed: () {
-                            Navigator.pop(context); // Cerrar el modal
-                            _sendPost(message, _selectedImagePath); // Enviar el post
-                            _textController.clear(); // Limpiar el campo de texto
+                            Navigator.pop(context); // Cierra el modal
+                            _sendPost(message, _selectedImagePath); // Envía la publicación
+                            _textController.clear(); // Limpia el campo de texto
                           },
                           child: Text('Publicar'), // Texto del botón
                         ),
@@ -155,34 +152,67 @@ class _CreatePostViewState extends State<CreatePostView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Crear Publicación'), // Título en la barra superior
+        title: Text('Post Some'), // Título en la barra superior
       ),
       body: Column(
         children: [
-          // Lista que muestra las publicaciones creadas
+          // Lista que muestra todas las publicaciones creadas
           Expanded(
             child: ListView.builder(
-              itemCount: _posts.length, // Número de publicaciones en la lista
+              itemCount: _posts.length, // Cantidad de publicaciones
               itemBuilder: (context, index) {
-                final post = _posts[index]; // Obtener cada publicación
-                return ListTile(
-                  title: Text(post.texto), // Mostrar el texto de la publicación
-                  subtitle: Text('Creado el: ${post.fechaCreacion}'), // Mostrar la fecha de creación
-                  trailing: post.imagenURL != null
-                      ? (kIsWeb
-                      ? Image.network(post.imagenURL!, width: 50, height: 50) // Imagen en Web
-                      : Image.file(File(post.imagenURL!), width: 50, height: 50)) // Imagen en local
-                      : null,
+                final post = _posts[index]; // Obtiene cada publicación
+                return Padding(
+                  padding: const EdgeInsets.all(8.0), // Margen alrededor del post
+                  child: Card(
+                    elevation: 4, // Efecto de sombra
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start, // Alinear a la izquierda
+                        children: [
+                          // Mostrar la imagen si existe
+                          if (post.imagenURL != null)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8), // Bordes redondeados
+                              child: kIsWeb
+                                  ? Image.network(
+                                post.imagenURL!, // Imagen desde URL (Web)
+                                width: 200,
+                                height: 200,
+                                fit: BoxFit.cover,
+                              )
+                                  : Image.file(
+                                File(post.imagenURL!), // Imagen local (dispositivos)
+                                width: 200,
+                                height: 200,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          const SizedBox(height: 8),
+                          Text(
+                            post.texto, // Texto de la publicación
+                            style: TextStyle(fontSize: 16),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Creado el: ${post.fechaCreacion}', // Fecha de creación
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 );
               },
             ),
           ),
-          // Botón para abrir el modal y crear una nueva publicación
+          // Botón para abrir el modal y crear una publicación
           Padding(
-            padding: const EdgeInsets.all(16.0), // Espaciado alrededor del botón
+            padding: const EdgeInsets.all(100.0),
             child: ElevatedButton(
-              onPressed: _openPostModal, // Función que abre el modal
-              child: Text('Crear Publicación'), // Texto del botón
+              onPressed: _openPostModal, // Abre el modal
+              child: Text('Postear'),
             ),
           ),
         ],
@@ -190,4 +220,3 @@ class _CreatePostViewState extends State<CreatePostView> {
     );
   }
 }
-

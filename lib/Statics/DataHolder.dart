@@ -70,7 +70,7 @@ class DataHolder {
     }
   }
 
-
+/*
   // Gestión de publicaciones (FBPost)
 
   // Guardar una publicación en Firebase (Diego)
@@ -91,7 +91,7 @@ class DataHolder {
       print('Error al sincronizar publicaciones: $e');
       return [];
     }
-  }
+  }*/
 
   // Obtener todas las comunidades
   List<FbCommunity> get allCommunities => _allCommunities;

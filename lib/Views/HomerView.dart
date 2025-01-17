@@ -1,9 +1,13 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:triboo/Statics/FirebaseAdmin.dart';
 import 'package:triboo/Views/CommunityView.dart';
 import 'package:triboo/Views/Customs/CustomDrawer.dart';
 import 'package:triboo/Views/LoginView.dart';
 
+
 import '../Statics/DataHolder.dart';
+import 'CommunityGridView.dart';
 import 'HomeView.dart';
 
 class HomerView extends StatefulWidget {
@@ -19,7 +23,7 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
   final Widget _farLeftScreen = HomeView();
   final Widget _centerLeftScreen = HomeView();
   final Widget _trueCenterScreen = HomeView();
-  final Widget _centerRightScreen = HomeView();
+  final Widget _centerRightScreen = CommunityGridView();
   final Widget _farRightScreen = CommunityView();
 
 

@@ -1,0 +1,102 @@
+[33m094711f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdev[m[33m, [m[1;31morigin/dev[m[33m)[m Merge pull request #21 from Eurekamps/revert-20-post_diego
+[33m54a9bd2[m Revert "creacion de post sencillo y guardarlo en una coleccion dentro de la comunidad"
+[33mba04e7c[m[33m ([m[1;31morigin/pro[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mpro[m[33m)[m Merge pull request #20 from Eurekamps/post_diego
+[33md2b37ff[m al pulsar una comunidad entra en CreatePostView.dart y al crear un post, este se introduce en firestore dentro de la comunidad correspondiente
+[33mf04a70f[m hemos creado la pestaña de comunidades y se colorea la comunidad que seleccionas
+[33mc42bb82[m he modificado la clase CreatePostView.dart para que sea mas estetica, implementando un formato de "tarjetas" para cada post y haciendo que el multimedia (de momento solo fotos) se muestre encima del texto del post
+[33m27ce24d[m Añadido el codigo de FBPost.dart, modificado el codigo de CreatePostView.dart y añadido al DataHolder.dart dos metodos nuevos para la gestión de publicaciones, uno para guardarlas y otro para sincronizarlas desde Firebase (llevan mi nombre al final para que deis con posibles errores rapido)
+[33m3f8f812[m Merge pull request #19 from Eurekamps/post_diego
+[33m9d7eb85[m creado la variable selectecCommunity en el DataHolder.dart que representara la comunidad selecionada
+[33m0fe5a44[m Merge pull request #18 from Eurekamps/Chats
+[33m7b37804[m Creacion de lo que hay dentro de cada chat la cual me permite conversar y ademas me deja enviar audios, chats, imagenes o videos
+[33mf440e23[m Creacion de la lista los chats que tenemos con unos datos basicos de la info del chat.Y que cuando pulse nos lleve a lo que hay dentro de cada chat
+[33m4e76a2e[m el nombre de la comunidad sale ahora debajo de la foto
+[33mccd8764[m refactorizada la descarga de comunidades, ahora la hace cuando entras al HomerView.dart y no al CommunityView.dart
+[33m3d5cccd[m creada la vista del home que te enseña a que comunidades sigues y que mostrara los posts que puedes ver
+[33m3ec2e45[m Merge pull request #17 from Eurekamps/refactorización
+[33mc7c2cda[m - refactorizdo el CommunityView.dart para y el DataHolder.dart que estaban iniciando otra instacia del FireBaseAdmin que no era necesaria
+[33mfde73e2[m - refactorizdo el LoginView.dart y el CustomDrawer.dart
+[33me9cb869[m - Ahora en navegador tambien recuerda si has iniciado sesionanteriormente y si ya estas logeado se descarga tu usuario y lo guarda en el dtaholder
+[33m97d4559[m Merge pull request #16 from Eurekamps/comunity
+[33m0a22a3a[m se agrega el llamado a la funcion para actualizar la lista de comunidades en local
+[33me2e3245[m se actualiza el codigo
+[33m53f31fb[m se agrega una funcion para actualizar en local la lista de comunidades
+[33m0843760[m actualizacion de las funciones de comunidad en el dataholder
+[33m0f543d1[m se realiza la division en la pantalla para que se muestre la lista de comunidades creadas por el usuario, a las que pertenece y las existentes
+[33mc81a556[m se actualiza el codigo para mejorar la funcionalidad
+[33m0051d84[m se agrega un boton para agregar comunidades
+[33me72928f[m modificacion en las listas
+[33m2104739[m refactorizacion del codigo , se crea nuevamente las funciones , funcion para descargar la lista de comunidades
+[33m037e3eb[m refactorizacion del codigo
+[33mb5702a3[m se hacen modificaciones y se agregan botones en la lista de comunidades creadas por el usuario
+[33m97e5b7d[m se actualiza el codigo ya que no se usaban las funciones adecuadas
+[33m71b5f14[m se coloca la view de comunidad en homervie para poder visualizarla
+[33m025f9aa[m se crea las funciones para obtener la lista de comunidades , crear una comuidad nueva, editar, borrar y unirse a una comunidad existente
+[33m580579b[m creacion de la vista para comunidades
+[33mec9a959[m Merge pull request #15 from Eurekamps/comunidades
+[33mf7ab5af[m Acabada la clase de FirebaseAdmin.dart
+[33m750edea[m actualizaciones del codigo para que esten correctamente enlzadas el dataholder y firebaseadmin
+[33mac9b518[m se agrega la funcion para sincronizar la lista de comunidades y enlazar con el dataholder
+[33m34b2da0[m actualizacion
+[33mc6c5718[m falto agregar el avatar y se actualiza la clase
+[33mfe8530f[m se agregan las funciones de actualizar una comunidad, eliminarla, buscar una comuinidad y sincronizacion de comunidades desde firebase
+[33m96e6f3f[m se actualiza dataholder agregando los metodos para las comunidades : obtener listas, reemplazar listas y agregar comunidades
+[33ma1b92f3[m creacion de la clase FbCommunity
+[33m663c834[m Inserccion del Primer home donde Iran los chats, en este caso he reciclado codigo pero ahi tendria que ir los chats, por lo que hay que refactorizar codigo y dejar que te deje ver chats en vez de productos
+[33m6670194[m Creacion de un campo de texto customizado para pasarle todos los datos y tocar como se ve visualmente solo desde la clase (Queda revisar una cosilla en cuanto a las contraseñas, pero no hay mucho mas)
+[33m0303f32[m Creacion de un boton customizado para pasarle todos los datos y tocar como se ve visualmente solo desde la clase
+[33md2381a9[m configuracion para que el usuario pueda modificar el perfil cuando se ha logueado y ademas hemos descubierto que era stateless y por eso no cambiaba las cosas, por lo que lo hemos hecho statefull, tanto las configurations como el change para que pueda funcionar
+[33mfe068ff[m PMDM: Creacion del menu de configuraciones el cual nos dejara modificar el perfil, cambiar coanfiguraciones, desloguearse y se accede desde el drawer del home
+[33mce0438d[m Añadimos el provider para el cambio entre modo claro y oscuro
+[33m3721d21[m Merge pull request #14 from Eurekamps/NOSEQUEESLAIZQUIERDA
+[33m4c0c5b6[m Ahora la izquierda en el HomerView.dart si es la izquierda que antes estaba al reves xd
+[33m8dca1fc[m Merge pull request #13 from Eurekamps/David_FirebaseAdmin
+[33m9ea93a5[m - Creada la funcion saveFBData en el FirebaseAdmin.dart - Refactorizada la funcion upLoadProfileData() en el ProfileUserView.dart usando el FirebaseAdmin.dart
+[33mac95ad2[m - Creada instancia del FirebaseAdmin.dart en el DataHolder.dart - Creada la funcion fetchFBData en el FirebaseAdmin.dart - Refactorizada la funcion clickLog() en el LoginView.dart usando el FirebaseAdmin.dart
+[33me6ddffc[m Creada la Clase FirebaseAdmin
+[33m9cbefb0[m Conseguido el poder hacer el dploy de la aplicacion en plataforma Web
+[33mafe2d2d[m Merge pull request #12 from Eurekamps/David_HomerView
+[33m99be373[m -Implementado el CustomDrawer(Le he quitado la funcion a los botones y la funcion auxiliar que habria que volver a hacerla para asegurarnos que el usuario esta cargado pero como toca hacer una reformulacion de codigo prefuero no tocar nada :))
+[33md209ee5[m Eliminadas las clases custom de NavBar y NavButton ya que no son necesaias con la reformulacion del codigo
+[33m7c2e57c[m Creadas variables que representan las pantallas dentro del HomerView.dart
+[33mfde519c[m Merge pull request #11 from Eurekamps/David_HomerView
+[33mfd8b02b[m Creada la primera versión del HomerView
+[33mcf4725b[m Merge pull request #10 from Eurekamps/Arreglo_Imagenes
+[33me053c9e[m Arreglado el tema de subir imagenes desde web
+[33m8b153d9[m Merge pull request #9 from Eurekamps/idiomas
+[33mace8db0[m Terminado de montar para poder montar lo de los idiomas segun corresponda, ya solo falta utilizarlo e ir añadiendo como si fueran los strings de Kotlin
+[33m874d76f[m Primera Interaccion con poder traducir los idiomas segun el sistema operativo que se seleccione
+[33m4f511ec[m Merge pull request #8 from Eurekamps/Arreglos
+[33ma33ae2d[m Reconfiguracion a minusculas porque no coge el camel
+[33m4e8ea60[m Merge pull request #7 from Eurekamps/navbar_David
+[33mfb2673c[m creada la primera version de la barra de navegación
+[33m244f7e2[m creada la primera version de la barra de navegación
+[33m681315e[m Merge pull request #6 from Eurekamps/ArreglarYSplash
+[33m406cf86[m Reconfiguracion del primer splash utilizando animaciones
+[33m16eff1a[m Reconfiguracion de Fb porque habia petado
+[33maa563de[m Creada la primera version de los botones de navegación
+[33m669a916[m Modificacion del profile user para que se utilice el dataholder
+[33m9572069[m Modificacion del Loging para poder utilizar el dataholder
+[33mb8b6009[m creacion del Dataholder para que se puedean descargar los datos del perfil
+[33m80e9da1[m Quitado el const
+[33m9cb7572[m Modificacion del main.dart para eliminar que aparezca el debug mode
+[33m78f155d[m Merge pull request #5 from Eurekamps/ParaPantallasBase
+[33m25ca6ad[m Modificacion de Triboo.dart porque no reconocia las rutas, ya las reconoce
+[33ma0abbb9[m Creacion del repositorio FBOBJECTS, donde se manejaran entre otros los datos del perfil, pero puede servir para algo mas que el FbPerfil.dart, como conversaciones y demas
+[33me67c27c[m Creacion del loading lo otro era el login
+[33mb5702ff[m Creacion del ProfileUserView.dart, para que el usuario tenga unos datos basicos para la App, (La imagen de moemento no funciona en WeB, y falta que sea Scrolleable)
+[33m7fcddb2[m Creacion del RegisterView, donde se les dará un perfil y UID a los usuarios, el cual esta conectado con firebase, de momento es solo por correo electronico, pero en un futuro se baraja añadir mas opciones
+[33m6d996f6[m Creacion de la pantalla de carga, reutilizable para cada vez que se tenga que cargar algo y asi el usuario lo sepa, es reciclable y friendlyuser
+[33m67b1820[m Creacion de la carpeta de assets para el uso de las imagenes que se necesiten en la App
+[33m4b7607e[m Creacion del HomeView, donde se podra realizar los pasos siguientes despues de la autentificacion
+[33m09481ce[m Modificacion del yml para que funcione con todo lo que se necesita para el proyecto hasta el momento, ademas de la primera fase de lo que es el splash, por otra parte se va a iniciar la cracion de una carpeta para el uso de las imagenes que se usen a nivel interno
+[33m7a1e47f[m Creacion de las primeras rutas de navegacion para que se mueva entre las partes, me dispongo a empezar con las views
+[33mf3b2822[m Merge pull request #4 from Eurekamps/ConexionFirebase
+[33m5d0991a[m Merge remote-tracking branch 'Triboo_Presentable/dev' into dev
+[33mea65416[m Inicio de la App y vinculación con firebase modificando el yml y con los comandos para vicularlo con el propio directorio de firebase
+[33m2e8e87f[m Merge pull request #3 from Eurekamps/dev
+[33mb53453a[m Merge pull request #2 from Eurekamps/dev-yony
+[33m6736d9e[m He borrado parte del main
+[33m48ab9e4[m Merge pull request #1 from Eurekamps/feature-splashview
+[33m5e44253[m Feature SplashView agregado y finalizado
+[33m7872b6a[m Initial commit

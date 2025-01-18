@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:triboo/Statics/DataHolder.dart';
 
 import '../FBObjects/FbCommunity.dart';
 import '../FBObjects/FBPost.dart';
@@ -40,8 +41,10 @@ class _CreatePostViewState extends State<CreatePostView> {
     );
 
     try {
-      await FirebaseAdmin().saveFBData(
-        collectionPath: 'comunidades/${widget.community.id}/posts',
+      await DataHolder().fbAdmin.saveFBData(
+        collectionPath: 'comunidades',
+        docId: widget.community.id,
+        subcollectionPath: 'posts',
         data: newPost.toFirestore(),
       );
       ScaffoldMessenger.of(context).showSnackBar(

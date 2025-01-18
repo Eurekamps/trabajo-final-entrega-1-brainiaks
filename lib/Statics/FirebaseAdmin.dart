@@ -155,35 +155,63 @@ class FirebaseAdmin{
   /// [docId] es el identificador único del documento dentro de la colección.
   ///   - Si se proporciona, se usará este ID para el documento.
   ///   - Si se omite, Firestore generará automáticamente un ID único para el documento.
+  /// [subcollectionPath] es el nombre de una subcolección dentro de un documento (opcional).
+  ///   - Si se proporciona, los datos se guardarán en esta subcolección en lugar de la colección principal.
+  ///   - Si no se proporciona, los datos se guardarán directamente en la colección principal.
   /// [onError] es un callback opcional que se ejecuta si ocurre un error durante la operación.
   ///   - Recibe un mensaje de error como argumento.
   ///
   /// Esta función guarda los datos en Firestore:
   ///   - Si [docId] se proporciona, usa el método `set` para sobrescribir o crear el documento con ese ID.
   ///   - Si [docId] no se proporciona, usa el método `add` para crear un documento con un ID generado automáticamente.
+  ///   - Si [subcollectionPath] se proporciona, los datos se guardarán en la subcolección dentro del documento especificado.
   ///
   /// No retorna ningún valor. Si ocurre un error, se ejecuta el callback [onError] si está definido.
-    Future<void> saveFBData({
-      required String collectionPath,
-      required Map<String, dynamic> data,
-      String? docId,
-      Function(String)? onError
-    }) async{
+  Future<void> saveFBData({
+    required String collectionPath,
+    required Map<String, dynamic> data,
+    String? docId,
+    String? subcollectionPath,  // Parametro para especificar subcolección
+    Function(String)? onError,
+  }) async {
     try {
-      if (docId != null) {
-        await FirebaseFirestore.instance
-            .collection(collectionPath)
-            .doc(docId)
-            .set(data);
-      } else{
-        await FirebaseFirestore.instance
-            .collection(collectionPath)
-            .add(data);
+      // Si hay subcolección especificada, guardamos en ella
+      if (subcollectionPath != null) {
+        if (docId != null) {
+          // Si docId se proporciona, guardamos los datos en la subcolección del documento específico
+          await FirebaseFirestore.instance
+              .collection(collectionPath)
+              .doc(docId)
+              .collection(subcollectionPath)  // Subcolección dentro del documento
+              .add(data);  // Firestore creará la subcolección automáticamente si no existe
+        } else {
+          // Si no se proporciona docId, Firestore no sabrá en qué documento guardar la subcolección
+          // Por lo tanto, tendrías que manejar este caso adecuadamente, por ejemplo, creando un documento primero
+          throw Exception('Se requiere un docId cuando se especifica una subcolección.');
+        }
+      } else {
+        // Si no se especifica subcolección, guardamos directamente en la colección principal
+        if (docId != null) {
+          // Si se proporciona docId, usa set para guardar datos en el documento específico
+          await FirebaseFirestore.instance
+              .collection(collectionPath)
+              .doc(docId)
+              .set(data);
+        } else {
+          // Si no se proporciona docId, Firestore generará un ID automáticamente
+          await FirebaseFirestore.instance
+              .collection(collectionPath)
+              .add(data);
+        }
       }
     } catch (e) {
-      if(onError != null) onError('Error al guardar el perfil: $e');
+      // Si ocurre un error, ejecutamos el callback onError si está definido
+      if (onError != null) {
+        onError('Error al guardar los datos: $e');
+      }
     }
   }
+
 
   /// Función genérica para eliminar un documento en Firestore.
   ///

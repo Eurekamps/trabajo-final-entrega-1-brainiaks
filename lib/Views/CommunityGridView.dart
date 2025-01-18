@@ -1,8 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:triboo/Views/CreatePostView.dart';
 
 import '../FBObjects/FbCommunity.dart';
 import '../Statics/DataHolder.dart';
+
 
 class CommunityGridView extends StatefulWidget {
   @override
@@ -34,13 +36,12 @@ class _CommunityGridViewState extends State<CommunityGridView> {
 
           return GestureDetector(
             onTap: () {
-              // Actualiza el valor en DataHolder y selecciona el índice
-              setState(() {
-                selectedGridIndex = index;
-              });
-              DataHolder().selectedCommunity = community;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Seleccionaste: ${community.name}')),
+              // Navegar a la vista de mensajes con la comunidad seleccionada
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CreatePostView(community: community),
+                ),
               );
             },
             child: Card(

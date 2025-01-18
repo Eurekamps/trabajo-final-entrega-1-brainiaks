@@ -4,7 +4,7 @@ class FBPost {
   String texto; // Contenido del texto de la publicación
   String? imagenURL; // URL de la imagen asociada (opcional)
   DateTime fechaCreacion; // Fecha y hora de la creación de la publicación
-  String autorID; // Identificador único del autor de la publicación
+  final String autorID; // Identificador único del autor de la publicación
 
   FBPost({
     required this.texto,

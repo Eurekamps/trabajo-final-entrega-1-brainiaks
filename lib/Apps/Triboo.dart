@@ -27,7 +27,6 @@ class Triboo extends StatelessWidget {
       '/HomeView':(context)=>  HomerView(),
       '/RegisterView':(context) => RegisterView(),
       '/ProfileUserView':(context) => ProfileUserView(),
-
     };
 
     MaterialApp app = MaterialApp(title: "Triboo",

@@ -4,12 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'ChatDetailScreen.dart';
 
 // Pantalla principal que muestra la lista de chats
-class ChatListScreen extends StatefulWidget {
+class ChatListScreenView extends StatefulWidget {
   @override
-  _ChatListScreenState createState() => _ChatListScreenState();
+  _ChatListScreenViewState createState() => _ChatListScreenViewState();
 }
 
-class _ChatListScreenState extends State<ChatListScreen> {
+class _ChatListScreenViewState extends State<ChatListScreenView> {
   String searchQuery = ""; // Variable para almacenar el texto ingresado en el campo de búsqueda
 
   @override

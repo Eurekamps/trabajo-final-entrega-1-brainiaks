@@ -2,7 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../FBObjects/FbPerfil.dart';
 import '../Statics/DataHolder.dart';
+import '../Statics/FirebaseAdmin.dart';
+import 'LoadingView.dart';
 
 
 class LoginView extends StatefulWidget {
@@ -16,19 +19,66 @@ class _LoginViewState extends State<LoginView> {
   String errorMessage = '';
   bool _isPasswordVisible = false; // Variable para controlar la visibilidad de la contraseña
 
+
   void clickLog() async {
+    try {
+      // Validación básica de campos
+      if (tecUser.text.isEmpty || tecPass.text.isEmpty) {
+        setState(() => errorMessage = 'Complete todos los campos');
+        return;
+      }
 
-    await DataHolder().fbAdmin.logIn( email: tecUser.text, password: tecPass.text);
+      // Limpiar estado previo
+      DataHolder().userProfile = null;
 
-    if (DataHolder().userProfile == null) {
-      // Si no existe perfil, redirige al ProfileUserView
-      Navigator.of(context).pushReplacementNamed("/ProfileUserView");
-    } else {
-      // Si el perfil existe, navega a la siguiente pantalla
-      Navigator.of(context).pushReplacementNamed(
-        "/HomeView",
-        //arguments: DataHolder().userProfile,
+      // 1. Autenticar
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+          email: tecUser.text.trim(),
+          password: tecPass.text.trim()
       );
+
+      // 2. Verificar perfil con retry
+      bool profileExists = await _checkProfileWithRetry(userCredential.user!.uid);
+
+      // 3. Redirigir según existencia
+      if (profileExists) {
+        Navigator.pushReplacementNamed(context, "/HomeView");
+      } else {
+        Navigator.pushReplacementNamed(context, "/ProfileUserView");
+      }
+
+    } on FirebaseAuthException catch (e) {
+      setState(() => errorMessage = _getAuthErrorMessage(e.code));
+    } catch (e) {
+      setState(() => errorMessage = 'Error inesperado: ${e.toString()}');
+    }
+  }
+
+  Future<bool> _checkProfileWithRetry(String uid, {int retries = 3}) async {
+    for (int i = 0; i < retries; i++) {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+
+      if (doc.exists) {
+        DataHolder().userProfile = FbPerfil.fromFirestore(doc, null);
+        return true;
+      }
+
+      // Esperar progresivamente más en cada reintento
+      await Future.delayed(Duration(milliseconds: 500 * (i + 1)));
+    }
+    return false;
+  }
+
+  String _getAuthErrorMessage(String code) {
+    switch (code) {
+      case 'user-not-found': return 'Usuario no registrado';
+      case 'wrong-password': return 'Contraseña incorrecta';
+      case 'invalid-email': return 'Correo inválido';
+      default: return 'Error de autenticación';
     }
   }
 

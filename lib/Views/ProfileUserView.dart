@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -109,50 +110,73 @@ class _ProfileUserViewState extends State<ProfileUserView> {
   }
 
   Future<void> uploadProfileData() async {
+    // Validación de campos
     if (tecName.text.isEmpty || tecNickname.text.isEmpty || selectedBirthday == null) {
-      setState(() {
-        errorMessage = 'Por favor, complete todos los campos.';
-      });
+      setState(() => errorMessage = 'Complete todos los campos');
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => LoadingView()),
+    // Mostrar loading
+    final loadingContext = Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => LoadingView())
     );
 
-    String? imageUrl;
-    if (profileImage != null) {
-      imageUrl = await uploadImage(profileImage!);
-      if (imageUrl == null) {
-        Navigator.pop(context);
-        setState(() {
-          errorMessage = 'Error al subir la imagen.';
-        });
-        return;
-      }
-    }
-
     try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('Usuario no autenticado');
 
+      // 1. Subir imagen si existe
+      String? imageUrl;
+      if (profileImage != null) {
+        imageUrl = await uploadImage(profileImage!);
+        if (imageUrl == null) throw Exception('Error al subir imagen');
+      }
+
+      // 2. Crear objeto perfil
       final perfil = FbPerfil(
         nombre: tecName.text,
         apodo: tecNickname.text,
         imagenURL: imageUrl ?? '',
-        cumple: "${selectedBirthday?.day}-${selectedBirthday?.month}-${selectedBirthday?.year}",
+        cumple: "${selectedBirthday!.day}-${selectedBirthday!.month}-${selectedBirthday!.year}",
       );
 
-      await DataHolder().fbAdmin.saveFBData(collectionPath: "users", data: perfil.toFirestore(), onError: handleError);
+      // 3. Guardar en Firestore (con confirmación explícita)
+      final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      await userDoc.set(perfil.toFirestore());
 
-      DataHolder().userProfile=perfil;
-      Navigator.pop(context);
-      Navigator.popAndPushNamed(context, "/HomeView");
+      // 4. Esperar y confirmar que el perfil se guardó correctamente
+      final confirmedDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get()
+          .timeout(const Duration(seconds: 5));
+
+      if (!confirmedDoc.exists) {
+        throw Exception('El perfil no se guardó correctamente');
+      }
+
+      // 5. Actualizar DataHolder con los datos confirmados
+      DataHolder().userProfile = FbPerfil.fromFirestore(confirmedDoc, null);
+
+      // 6. Navegación segura con limpieza completa del stack
+      Navigator.of(loadingContext as BuildContext).pop();
+      Navigator.of(context).pushNamedAndRemoveUntil(
+          '/HomeView',
+              (Route<dynamic> route) => false
+      );
+
+      // Debug: Verificar en consola
+      print('Perfil guardado y confirmado para UID: ${user.uid}');
+      print('Datos confirmados: ${confirmedDoc.data()}');
+
+    } on TimeoutException {
+      Navigator.of(loadingContext as BuildContext).pop();
+      setState(() => errorMessage = 'Tiempo de espera agotado. Verifica tu conexión');
     } catch (e) {
-      Navigator.pop(context);
-      setState(() {
-        errorMessage = 'Error al subir los datos del perfil.';
-      });
+      Navigator.of(loadingContext as BuildContext).pop();
+      setState(() => errorMessage = 'Error: ${e.toString()}');
+      print('Error completo al guardar perfil: ${e.toString()}');
+      debugPrintStack(stackTrace: e is Error ? e.stackTrace : null);
     }
   }
 

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:triboo/Statics/FirebaseAdmin.dart';
@@ -20,6 +22,7 @@ class DataHolder {
 
   FbPerfil? userProfile;
   FirebaseAdmin fbAdmin = FirebaseAdmin();
+  Uint8List? tempProfileImage;
 
   // Constructor privado
   DataHolder._internal();
@@ -28,7 +31,9 @@ class DataHolder {
   factory DataHolder() {
     return _dataHolder;
   }
-
+  void clearTempData() {
+    tempProfileImage = null;
+  }
   // Método para obtener el perfil de usuario desde Firestore
  /* Future<bool> getUserProfile(String userId) async {
     try {

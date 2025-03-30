@@ -7,6 +7,7 @@ import 'package:triboo/Views/LoginView.dart';
 
 
 import '../Statics/DataHolder.dart';
+import 'ChatsListScreenView.dart';
 import 'CommunityGridView.dart';
 import 'HomeView.dart';
 
@@ -22,7 +23,7 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
 
   final Widget _farLeftScreen = HomeView();
   final Widget _centerLeftScreen = HomeView();
-  final Widget _trueCenterScreen = HomeView();
+  final Widget _trueCenterScreen = ChatListScreenView();
   final Widget _centerRightScreen = CommunityGridView();
   final Widget _farRightScreen = CommunityView();
 

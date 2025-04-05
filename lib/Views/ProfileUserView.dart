@@ -110,29 +110,27 @@ class _ProfileUserViewState extends State<ProfileUserView> {
   }
 
   Future<void> uploadProfileData() async {
-    // Validación de campos
     if (tecName.text.isEmpty || tecNickname.text.isEmpty || selectedBirthday == null) {
       setState(() => errorMessage = 'Complete todos los campos');
       return;
     }
 
-    // Mostrar loading
-    final loadingContext = Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => LoadingView())
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => LoadingView(),
     );
 
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('Usuario no autenticado');
 
-      // 1. Subir imagen si existe
       String? imageUrl;
       if (profileImage != null) {
         imageUrl = await uploadImage(profileImage!);
         if (imageUrl == null) throw Exception('Error al subir imagen');
       }
 
-      // 2. Crear objeto perfil
       final perfil = FbPerfil(
         nombre: tecName.text,
         apodo: tecNickname.text,
@@ -140,43 +138,20 @@ class _ProfileUserViewState extends State<ProfileUserView> {
         cumple: "${selectedBirthday!.day}-${selectedBirthday!.month}-${selectedBirthday!.year}",
       );
 
-      // 3. Guardar en Firestore (con confirmación explícita)
-      final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
-      await userDoc.set(perfil.toFirestore());
-
-      // 4. Esperar y confirmar que el perfil se guardó correctamente
-      final confirmedDoc = await FirebaseFirestore.instance
+      await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .get()
-          .timeout(const Duration(seconds: 5));
+          .set(perfil.toFirestore());
 
-      if (!confirmedDoc.exists) {
-        throw Exception('El perfil no se guardó correctamente');
-      }
+      DataHolder().userProfile = perfil; // Actualiza DataHolder
 
-      // 5. Actualizar DataHolder con los datos confirmados
-      DataHolder().userProfile = FbPerfil.fromFirestore(confirmedDoc, null);
+      Navigator.of(context).pop(); // Cierra loading
+      Navigator.pushReplacementNamed(context, '/HomeView'); // Navegación segura
 
-      // 6. Navegación segura con limpieza completa del stack
-      Navigator.of(loadingContext as BuildContext).pop();
-      Navigator.of(context).pushNamedAndRemoveUntil(
-          '/HomeView',
-              (Route<dynamic> route) => false
-      );
-
-      // Debug: Verificar en consola
-      print('Perfil guardado y confirmado para UID: ${user.uid}');
-      print('Datos confirmados: ${confirmedDoc.data()}');
-
-    } on TimeoutException {
-      Navigator.of(loadingContext as BuildContext).pop();
-      setState(() => errorMessage = 'Tiempo de espera agotado. Verifica tu conexión');
     } catch (e) {
-      Navigator.of(loadingContext as BuildContext).pop();
+      Navigator.of(context).pop(); // Cierra loading en error
       setState(() => errorMessage = 'Error: ${e.toString()}');
-      print('Error completo al guardar perfil: ${e.toString()}');
-      debugPrintStack(stackTrace: e is Error ? e.stackTrace : null);
+      print('Error al guardar perfil: $e');
     }
   }
 

@@ -96,7 +96,7 @@ class _LoginViewState extends State<LoginView> {
       backgroundColor: Colors.blueGrey[900],
       appBar: AppBar(
         title: Text(
-          "Login - Premios CELO",
+          "Login - Triboo",
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,

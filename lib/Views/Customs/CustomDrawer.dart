@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../Statics/DataHolder.dart';
@@ -12,15 +13,39 @@ class CustomDrawer extends StatefulWidget {
 
 class _CustomDrawerState extends State<CustomDrawer> {
   late Future<bool> _profileLoadedFuture;
+  String? _currentImageUrl;
 
   @override
   void initState() {
     super.initState();
+    _initializeProfile();
+  }
+
+  void _initializeProfile() {
     if (DataHolder().userProfile != null) {
+      _currentImageUrl = _processImageUrl(DataHolder().userProfile!.imagenURL);
       _profileLoadedFuture = Future.value(true);
     } else {
       _profileLoadedFuture = Future.value(false);
     }
+  }
+
+  String? _processImageUrl(String? originalUrl) {
+    if (originalUrl == null || originalUrl.isEmpty) return null;
+
+    // Añade timestamp para evitar cache en web
+    return kIsWeb ? '$originalUrl?t=${DateTime.now().millisecondsSinceEpoch}' : originalUrl;
+  }
+
+  ImageProvider _getImageProvider() {
+    if (_currentImageUrl == null) {
+      return const AssetImage('assets/images/default_avatar.jpg');
+    }
+
+    return NetworkImage(
+      _currentImageUrl!,
+      headers: const {"Cache-Control": "no-cache"},
+    );
   }
 
   @override
@@ -59,10 +84,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
                     children: [
                       CircleAvatar(
                         radius: 40,
-                        backgroundImage: userProfile.imagenURL != null
-                            ? NetworkImage(userProfile.imagenURL!)
-                            : AssetImage('assets/images/default_avatar.jpg')
-                        as ImageProvider,
+                        backgroundImage: _getImageProvider(),
                       ),
                       const SizedBox(height: 10),
                       Text(
@@ -78,9 +100,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
                 ListTile(
                   leading: const Icon(Icons.home),
                   title: const Text('Inicio'),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
+                  onTap: () => Navigator.pop(context),
                 ),
                 ListTile(
                   leading: const Icon(Icons.person),
@@ -128,5 +148,4 @@ class _CustomDrawerState extends State<CustomDrawer> {
       },
     );
   }
-
 }

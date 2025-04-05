@@ -5,12 +5,14 @@ class FBPost {
   String? imagenURL; // URL de la imagen asociada (opcional)
   DateTime fechaCreacion; // Fecha y hora de la creación de la publicación
   final String autorID; // Identificador único del autor de la publicación
+  final String autorApodo; // Apodo del autor de la publicación (nuevo campo)
 
   FBPost({
     required this.texto,
     this.imagenURL,
     required this.fechaCreacion,
     required this.autorID,
+    required this.autorApodo, // Nuevo parámetro requerido
   });
 
   /// Constructor para crear una instancia de FBPost desde un documento Firestore
@@ -24,6 +26,7 @@ class FBPost {
       imagenURL: data?['imagenURL'],
       fechaCreacion: (data?['fechaCreacion'] as Timestamp).toDate(),
       autorID: data?['autorID'] ?? '',
+      autorApodo: data?['autorApodo'] ?? 'Anónimo', // Nuevo campo
     );
   }
 
@@ -34,6 +37,7 @@ class FBPost {
       'imagenURL': imagenURL,
       'fechaCreacion': fechaCreacion,
       'autorID': autorID,
+      'autorApodo': autorApodo, // Nuevo campo en el mapa
     };
   }
 }

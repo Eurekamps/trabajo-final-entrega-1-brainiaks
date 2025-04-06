@@ -20,6 +20,14 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
+    myComunitys = [
+      ...DataHolder().createdCommunities,
+      ...DataHolder().joinedCommunities.where(
+              (joined) => !DataHolder().createdCommunities.any(
+                  (created) => created.id == joined.id
+          )
+      )
+    ];
     _loadPosts();
   }
 
@@ -33,19 +41,28 @@ class _HomeViewState extends State<HomeView> {
     if (myComunitys.isEmpty) return;
 
     setState(() => _isLoading = true);
-
     final communityId = myComunitys[_selectedCommunityIndex].id;
-    final postsSnapshot = await DataHolder().fbAdmin.fetchFBDataList(
-      collectionPath: 'comunidades/$communityId/posts',
-    );
+    print("Cargando posts de comunidad ID: $communityId"); // Debug
 
-    if (mounted) {
-      setState(() {
-        _posts = postsSnapshot?.map((doc) {
-          return FBPost.fromFirestore(doc, null);
-        }).toList() ?? [];
-        _isLoading = false;
-      });
+    try {
+      final postsSnapshot = await FirebaseFirestore.instance
+          .collection('comunidades')
+          .doc(communityId)
+          .collection('posts')
+          .orderBy('fechaCreacion', descending: true)
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _posts = postsSnapshot.docs.map((doc) {
+            return FBPost.fromFirestore(doc, null);
+          }).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error cargando posts: $e");
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -108,32 +125,23 @@ class _HomeViewState extends State<HomeView> {
   }
   Widget _buildStoryItem(FbCommunity community, int index) {
     final isSelected = _selectedCommunityIndex == index;
-    final itemWidth = 80.0;
 
-    return Container(
-      width: itemWidth,
-      margin: EdgeInsets.symmetric(horizontal: 4),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Círculo de la comunidad con borde
-          GestureDetector(
-            onTap: () => _onCommunitySelected(index),
-            child: Container(
+    return GestureDetector( // Envuelve todo el contenido en un GestureDetector
+      onTap: () => _onCommunitySelected(index),
+      child: SizedBox(
+        width: 84,
+        height: 110,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Avatar con borde
+            Container(
               padding: EdgeInsets.all(2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: isSelected
-                    ? LinearGradient(
-                  colors: [Colors.blue, Colors.purple],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-                    : LinearGradient(
-                  colors: [Colors.grey.shade300, Colors.grey.shade400],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                    ? LinearGradient(colors: [Colors.blue, Colors.purple])
+                    : LinearGradient(colors: [Colors.grey.shade300, Colors.grey.shade400]),
               ),
               child: CircleAvatar(
                 radius: 30,
@@ -144,25 +152,27 @@ class _HomeViewState extends State<HomeView> {
                 ),
               ),
             ),
-          ),
 
-          // Nombre de la comunidad
-          SizedBox(height: 6),
-          Container(
-            width: itemWidth - 8, // Ancho ligeramente menor para margen
-            child: Text(
-              community.name,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? Colors.blue : Colors.black,
+            SizedBox(height: 6),
+
+            // Nombre de la comunidad
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 2),
+              child: Text(
+                community.name,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? Colors.blue : Colors.black,
+                  height: 1.2,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -205,18 +215,21 @@ class _HomeViewState extends State<HomeView> {
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header del post (sin los tres puntos)
+          // Header del post
           Padding(
             padding: EdgeInsets.all(12),
             child: Row(
               children: [
-                // Avatar con inicial
+                // Avatar con inicial (mejorado)
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.blue.withOpacity(0.2),
@@ -229,80 +242,114 @@ class _HomeViewState extends State<HomeView> {
                       style: TextStyle(
                         color: Colors.blue,
                         fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
                   ),
                 ),
-                SizedBox(width: 8),
+                SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    post.autorApodo,
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        post.autorApodo,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        _formatDate(post.fechaCreacion),
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                // Se ha eliminado el IconButton de los tres puntos
               ],
             ),
           ),
 
-          // Imagen solo si existe
-          if (post.imagenURL != null && post.imagenURL!.isNotEmpty)
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.4,
+          // Contenido del post (con márgenes ajustados)
+          if (post.texto.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Text(
+                post.texto,
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 1.4,
+                ),
               ),
-              child: Image.network(
-                post.imagenURL!,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
+            ),
+
+          // Tags (nuevo)
+          if (post.tags != null && post.tags!.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: post.tags!.map((tag) {
                   return Container(
-                    height: 200,
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
-                            : null,
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      tag,
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontSize: 12,
                       ),
                     ),
                   );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 200,
-                    color: Colors.grey[200],
-                    child: Center(
-                      child: Icon(Icons.broken_image, color: Colors.grey),
-                    ),
-                  );
-                },
+                }).toList(),
               ),
             ),
 
-          // Contenido del post
-          Padding(
-            padding: EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  post.texto,
-                  style: TextStyle(fontSize: 14),
+          // Imagen (con bordes redondeados)
+          if (post.imagenURL != null && post.imagenURL!.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.4,
                 ),
-                SizedBox(height: 8),
-                Text(
-                  _formatDate(post.fechaCreacion),
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 10,
-                  ),
+                child: Image.network(
+                  post.imagenURL!,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      height: 200,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation(Colors.blue),
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 200,
+                      color: Colors.grey[100],
+                      child: Center(
+                        child: Icon(Icons.broken_image,
+                          color: Colors.grey[400],
+                          size: 40,
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              ],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -324,12 +371,13 @@ class _HomeViewState extends State<HomeView> {
 
   void _onCommunitySelected(int index) {
     if (_selectedCommunityIndex == index) return;
+    print("Comunidad seleccionada: ${myComunitys[index].id}"); // Debug
 
     setState(() {
       _selectedCommunityIndex = index;
       _posts = [];
     });
-    _loadPosts();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadPosts());
   }
 
   void _navigateToCreatePost() {

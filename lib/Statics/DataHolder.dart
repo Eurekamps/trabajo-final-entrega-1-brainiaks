@@ -19,6 +19,8 @@ class DataHolder {
 
   late FbCommunity selectedCommunity;
 
+  static String get currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
+
 
   FbPerfil? userProfile;
   FirebaseAdmin fbAdmin = FirebaseAdmin();

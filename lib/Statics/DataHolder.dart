@@ -37,28 +37,23 @@ class DataHolder {
     tempProfileImage = null;
   }
   // Método para obtener el perfil de usuario desde Firestore
- /* Future<bool> getUserProfile(String userId) async {
+  Future<bool> getUserProfile(String userId) async {
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('profiles')
-          .doc(userId)
-          .get();
-
-      if (snapshot.exists) {
-        userProfile = FbPerfil.fromFirestore(snapshot, null);
-        print("Perfil cargado: ${userProfile.toString()}");
-        return true;
+      // Intenta obtener los datos del perfil desde Firestore
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (doc.exists) {
+        // Si el perfil existe, lo almacenamos en DataHolder
+        DataHolder().userProfile = FbPerfil.fromFirestore(doc, null);
+        return true;  // Perfil descargado correctamente
       } else {
-        print("Perfil de usuario no encontrado en Firestore.");
-        userProfile = null;
-        return false;
+        return false; // No se encontró el perfil
       }
     } catch (e) {
-      print("Error al obtener el perfil: $e");
-      userProfile = null;
-      return false;
+      print('Error al obtener el perfil: $e');
+      return false; // Hubo un error al intentar obtener el perfil
     }
-  }*/
+  }
+
 
   // Método para guardar el perfil del usuario y usar un callback para manejar el error
   Future<void> saveUserProfile(FbPerfil perfil, String s,

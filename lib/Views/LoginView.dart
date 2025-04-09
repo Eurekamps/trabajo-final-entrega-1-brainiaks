@@ -7,7 +7,6 @@ import '../Statics/DataHolder.dart';
 import '../Statics/FirebaseAdmin.dart';
 import 'LoadingView.dart';
 
-
 class LoginView extends StatefulWidget {
   @override
   State<LoginView> createState() => _LoginViewState();
@@ -17,71 +16,51 @@ class _LoginViewState extends State<LoginView> {
   TextEditingController tecUser = TextEditingController();
   TextEditingController tecPass = TextEditingController();
   String errorMessage = '';
-  bool _isPasswordVisible = false; // Variable para controlar la visibilidad de la contraseña
+  bool _isPasswordVisible = false;
 
-
+  // Método que se invoca cuando el usuario hace clic en el botón de login
   void clickLog() async {
     try {
-      // Validación básica de campos
+      // Validar que los campos no estén vacíos
       if (tecUser.text.isEmpty || tecPass.text.isEmpty) {
         setState(() => errorMessage = 'Complete todos los campos');
         return;
       }
 
-      // Limpiar estado previo
+      // Limpiar perfil previo antes de autenticar al usuario
       DataHolder().userProfile = null;
 
-      // 1. Autenticar
-      final userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
-          email: tecUser.text.trim(),
-          password: tecPass.text.trim()
+      // Usamos el método logIn de FirebaseAdmin para autenticar y obtener el perfil
+      await FirebaseAdmin().logIn(
+        email: tecUser.text.trim(),
+        password: tecPass.text.trim(),
+        onError: (error) {
+          setState(() => errorMessage = error);
+        },
       );
 
-      // 2. Verificar perfil con retry
-      bool profileExists = await _checkProfileWithRetry(userCredential.user!.uid);
+      // Imprimir si la autenticación fue exitosa
+      print("Autenticación exitosa, usuario con UID: ${FirebaseAuth.instance.currentUser?.uid}");
 
-      // 3. Redirigir según existencia
-      if (profileExists) {
+      // Verificar si el perfil existe (ya está en DataHolder)
+      if (DataHolder().userProfile != null) {
+        // Si el perfil existe, redirigir a la vista principal
+        print("Perfil cargado exitosamente desde Firestore.");
         Navigator.pushReplacementNamed(context, "/HomeView");
       } else {
+        // Si no existe el perfil, redirigir a la vista para completar el perfil
+        print("No se encontró el perfil del usuario, redirigiendo a completar perfil.");
         Navigator.pushReplacementNamed(context, "/ProfileUserView");
       }
-
-    } on FirebaseAuthException catch (e) {
-      setState(() => errorMessage = _getAuthErrorMessage(e.code));
     } catch (e) {
+      // Manejar cualquier excepción
+      print("Error inesperado durante login: ${e.toString()}");
       setState(() => errorMessage = 'Error inesperado: ${e.toString()}');
     }
   }
 
-  Future<bool> _checkProfileWithRetry(String uid, {int retries = 3}) async {
-    for (int i = 0; i < retries; i++) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
 
-      if (doc.exists) {
-        DataHolder().userProfile = FbPerfil.fromFirestore(doc, null);
-        return true;
-      }
-
-      // Esperar progresivamente más en cada reintento
-      await Future.delayed(Duration(milliseconds: 500 * (i + 1)));
-    }
-    return false;
-  }
-
-  String _getAuthErrorMessage(String code) {
-    switch (code) {
-      case 'user-not-found': return 'Usuario no registrado';
-      case 'wrong-password': return 'Contraseña incorrecta';
-      case 'invalid-email': return 'Correo inválido';
-      default: return 'Error de autenticación';
-    }
-  }
-
+  // Función para limpiar los campos de entrada y los errores
   void clearFields() {
     tecUser.clear();
     tecPass.clear();
@@ -137,7 +116,7 @@ class _LoginViewState extends State<LoginView> {
               SizedBox(height: 16),
               TextFormField(
                 controller: tecPass,
-                obscureText: !_isPasswordVisible, // Controla la visibilidad
+                obscureText: !_isPasswordVisible, // Controla la visibilidad de la contraseña
                 decoration: InputDecoration(
                   labelText: 'Contraseña',
                   labelStyle: TextStyle(color: Colors.white70),
@@ -154,7 +133,7 @@ class _LoginViewState extends State<LoginView> {
                     ),
                     onPressed: () {
                       setState(() {
-                        _isPasswordVisible = !_isPasswordVisible; // Alterna la visibilidad
+                        _isPasswordVisible = !_isPasswordVisible; // Alterna la visibilidad de la contraseña
                       });
                     },
                   ),
@@ -180,7 +159,7 @@ class _LoginViewState extends State<LoginView> {
                       backgroundColor: Colors.lightBlueAccent,
                       padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
-                    onPressed: clickLog,
+                    onPressed: clickLog, // Ahora usa el método clickLog que hace la autenticación
                   ),
                   ElevatedButton.icon(
                     icon: FaIcon(FontAwesomeIcons.times),

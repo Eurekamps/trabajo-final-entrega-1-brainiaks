@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../Statics/DataHolder.dart';
 import '../ChangeProfileView.dart';
 import '../LoginView.dart';
@@ -22,30 +22,31 @@ class _CustomDrawerState extends State<CustomDrawer> {
   }
 
   void _initializeProfile() {
-    if (DataHolder().userProfile != null) {
-      _currentImageUrl = _processImageUrl(DataHolder().userProfile!.imagenURL);
-      _profileLoadedFuture = Future.value(true);
-    } else {
-      _profileLoadedFuture = Future.value(false);
-    }
+    // Inicializa la variable _profileLoadedFuture y obtiene el perfil
+    _profileLoadedFuture = DataHolder().getUserProfile(DataHolder.currentUserId).then((profileExists) {
+      if (profileExists) {
+        // Si el perfil existe, actualizar la URL de la imagen
+        setState(() {
+          _currentImageUrl = _processImageUrl(DataHolder().userProfile?.imagenURL);
+        });
+      }
+      return profileExists;
+    });
   }
 
   String? _processImageUrl(String? originalUrl) {
     if (originalUrl == null || originalUrl.isEmpty) return null;
 
-    // Añade timestamp para evitar cache en web
-    return kIsWeb ? '$originalUrl?t=${DateTime.now().millisecondsSinceEpoch}' : originalUrl;
+    // Añade timestamp para evitar cache en la web
+    return '$originalUrl?t=${DateTime.now().millisecondsSinceEpoch}';
   }
 
-  ImageProvider _getImageProvider() {
-    if (_currentImageUrl == null) {
-      return const AssetImage('assets/images/default_avatar.jpg');
-    }
-
-    return NetworkImage(
-      _currentImageUrl!,
-      headers: const {"Cache-Control": "no-cache"},
-    );
+  bool _isValidImageUrl(String url) {
+    // Verifica si la URL tiene una extensión válida para una imagen
+    final validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
+    final uri = Uri.parse(url);
+    final pathExtension = uri.path.split('.').last.toLowerCase();
+    return validExtensions.contains(pathExtension);
   }
 
   @override
@@ -82,9 +83,21 @@ class _CustomDrawerState extends State<CustomDrawer> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
+                      _currentImageUrl == null || !_isValidImageUrl(_currentImageUrl!)
+                          ? const CircleAvatar(
                         radius: 40,
-                        backgroundImage: _getImageProvider(),
+                        backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
+                      )
+                          : CachedNetworkImage(
+                        imageUrl: _currentImageUrl!,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => const CircularProgressIndicator(),
+                        errorWidget: (context, url, error) => const CircleAvatar(
+                          radius: 40,
+                          backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Text(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -62,45 +63,55 @@ class _ProfileUserViewState extends State<ProfileUserView> {
             profileImage = file;
             _imageBytes = bytes;
           });
-          print('Imagen cargada desde ${pickedSource == ImageSource.camera ? 'la cámara' : 'la galería'}');
+          print('✅ Imagen cargada desde ${pickedSource == ImageSource.camera ? 'la cámara' : 'la galería'}');
         } else {
-          print('No se pudo obtener la imagen seleccionada');
+          print('⚠️ No se pudo obtener la imagen seleccionada');
         }
       } else {
-        print('No se seleccionó ninguna opción');
+        print('⚠️ No se seleccionó ninguna opción');
       }
     } catch (e) {
-      print('Error al seleccionar la imagen: $e');
+      print('❌ Error al seleccionar la imagen: $e');
     }
   }
 
+
   Future<String?> uploadImage(XFile image) async {
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception("⚠️ Usuario no autenticado");
+
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('imagenes/usuarios/${user.uid}/avatar.jpg');
+
+      String downloadUrl;
+
       if (kIsWeb) {
+        // Web: Convertir a Uint8List y subir con `putData`
         final Uint8List imageBytes = await image.readAsBytes();
-        final storageRef = FirebaseStorage.instance
-            .ref()
-            .child('imagenes/usuarios/${FirebaseAuth.instance.currentUser?.uid}/avatar.jpg');
-        final metadata = SettableMetadata(contentType: 'image/jpeg');
+        final metadata = SettableMetadata(
+          contentType: 'image/jpeg', // Asegurar tipo MIME correcto
+          cacheControl: 'public, max-age=31536000', // Opcional, mejora cacheo
+        );
 
-        await storageRef.putData(imageBytes, metadata);
-        String downloadUrl = await storageRef.getDownloadURL();
+        final uploadTask = storageRef.putData(imageBytes, metadata);
+        await uploadTask.whenComplete(() => print("✅ Imagen subida en la web"));
 
-        print('URL de la imagen subida en la web: $downloadUrl');
-        return downloadUrl;
+        downloadUrl = await storageRef.getDownloadURL();
       } else {
-        final storageRef = FirebaseStorage.instance
-            .ref()
-            .child('imagenes/usuarios/${FirebaseAuth.instance.currentUser?.uid}/avatar.jpg');
+        // Móvil: Subir directamente el archivo
         final file = File(image.path);
-        await storageRef.putFile(file);
-        String downloadUrl = await storageRef.getDownloadURL();
+        final uploadTask = storageRef.putFile(file);
+        await uploadTask.whenComplete(() => print("✅ Imagen subida en móvil"));
 
-        print('URL de la imagen subida en dispositivo móvil: $downloadUrl');
-        return downloadUrl;
+        downloadUrl = await storageRef.getDownloadURL();
       }
+
+      print('📥 URL de la imagen subida: $downloadUrl');
+      return downloadUrl;
     } catch (e) {
-      print("Error uploading image: $e");
+      print("❌ Error subiendo imagen: $e");
       setState(() {
         errorMessage = 'Error al subir la imagen: $e';
       });
@@ -110,51 +121,50 @@ class _ProfileUserViewState extends State<ProfileUserView> {
 
   Future<void> uploadProfileData() async {
     if (tecName.text.isEmpty || tecNickname.text.isEmpty || selectedBirthday == null) {
-      setState(() {
-        errorMessage = 'Por favor, complete todos los campos.';
-      });
+      setState(() => errorMessage = '⚠️ Complete todos los campos');
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => LoadingView()),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => LoadingView(),
     );
 
-    String? imageUrl;
-    if (profileImage != null) {
-      imageUrl = await uploadImage(profileImage!);
-      if (imageUrl == null) {
-        Navigator.pop(context);
-        setState(() {
-          errorMessage = 'Error al subir la imagen.';
-        });
-        return;
-      }
-    }
-
     try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('⚠️ Usuario no autenticado');
+
+      String? imageUrl;
+      if (profileImage != null) {
+        imageUrl = await uploadImage(profileImage!);
+        if (imageUrl == null) throw Exception('⚠️ Error al subir imagen');
+      }
 
       final perfil = FbPerfil(
         nombre: tecName.text,
         apodo: tecNickname.text,
         imagenURL: imageUrl ?? '',
-        cumple: "${selectedBirthday?.day}-${selectedBirthday?.month}-${selectedBirthday?.year}",
+        cumple: "${selectedBirthday!.day}-${selectedBirthday!.month}-${selectedBirthday!.year}",
       );
 
-      await DataHolder().fbAdmin.saveFBData(collectionPath: "users", data: perfil.toFirestore(), onError: handleError);
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set(perfil.toFirestore());
 
-      DataHolder().userProfile=perfil;
-      Navigator.pop(context);
-      Navigator.popAndPushNamed(context, "/HomeView");
+      DataHolder().userProfile = perfil; // Actualiza DataHolder
+
+      Navigator.of(context).pop(); // Cierra loading
+      Navigator.pushReplacementNamed(context, '/HomeView'); // Navegación segura
+
     } catch (e) {
-      Navigator.pop(context);
-      setState(() {
-        errorMessage = 'Error al subir los datos del perfil.';
-      });
+      Navigator.of(context).pop(); // Cierra loading en error
+      setState(() => errorMessage = '❌ Error: ${e.toString()}');
+      print('❌ Error al guardar perfil: $e');
     }
   }
+
 
   void clearFields() {
     tecName.clear();

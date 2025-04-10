@@ -34,34 +34,60 @@ class FirebaseAdmin{
     Function(String)? onError,
   }) async {
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      // 1. Limpiar estado previo
+      DataHolder().userProfile = null;
+
+      // 2. Autenticar con Firebase Auth
+      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      try {
-        final data = await fetchFBData(collectionPath: 'users', docId: FirebaseAuth.instance.currentUser!.uid);
-        if(data != null){
-          if (data.exists) {
-            DataHolder().userProfile = FbPerfil.fromFirestore(data, null);
-          } else {
-            print("Perfil de usuario no encontrado en Firestore.");
-            DataHolder().userProfile = null;
-          }
-        }else{
-          DataHolder().userProfile = null;
-        }
-      } catch (e) {
-        print("Error al obtener el perfil: $e");
-        DataHolder().userProfile = null;
-        if(onError != null) onError('Error al Iniciar Sesión: $e');
 
+      // 3. Obtener perfil solo si la autenticación fue exitosa
+      final data = await fetchFBData(
+        collectionPath: 'users',
+        docId: userCredential.user!.uid,
+      );
+
+      if (data != null && data.exists) {
+        DataHolder().userProfile = FbPerfil.fromFirestore(data, null);
+      } else {
+        DataHolder().userProfile = null;
       }
+
     } on FirebaseAuthException catch (e) {
-     logInError = e.message!;
-     if(onError != null) onError('Error al Iniciar Sesión: $e');
+      DataHolder().userProfile = null;
+
+      final errorMessage = _getAuthErrorMessage(e.code);
+      logInError = errorMessage;
+
+      if (onError != null) onError(errorMessage);
+
+      // IMPORTANTE: Relanzamos la excepción para manejo externo
+      throw AuthException(errorMessage);
+
+    } catch (e) {
+      DataHolder().userProfile = null;
+      logInError = 'Error inesperado';
+      if (onError != null) onError('Error inesperado: $e');
+      throw Exception('Error general: $e');
     }
-    return ;
   }
+
+  String _getAuthErrorMessage(String code) {
+    switch (code) {
+      case 'user-not-found':
+        return 'El correo no está registrado';
+      case 'wrong-password':
+        return 'Contraseña incorrecta';
+      case 'invalid-email':
+        return 'Correo electrónico inválido';
+      default:
+        return 'Error al iniciar sesión (${code})';
+    }
+  }
+
+
 
   /// Función genérica para obtener un documento específico desde Firestore.
   ///
@@ -246,4 +272,8 @@ class FirebaseAdmin{
     }
     return null;
   }
+}
+class AuthException implements Exception {
+  final String message;
+  AuthException(this.message);
 }

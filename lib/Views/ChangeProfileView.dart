@@ -11,6 +11,7 @@ import 'dart:io';
 
 import '../Statics/DataHolder.dart';
 import 'HomeView.dart';
+import 'HomerView.dart';
 import 'LoadingView.dart';
 
 class ChangeProfileView extends StatefulWidget {
@@ -298,7 +299,7 @@ class _ChangeProfileViewState extends State<ChangeProfileView> {
                       // Si se guarda el perfil correctamente, redirigimos a HomeView
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => HomeView()),
+                        MaterialPageRoute(builder: (context) => HomerView()),
                       );
                     },
                   ),

@@ -8,6 +8,7 @@ class FbCommunity {
   String name; // Nombre de la comunidad
   String description; // Descripción de la comunidad
   String avatar; // Foto de comunidad
+  String category;
 
   FbCommunity({
     required this.id,
@@ -17,6 +18,7 @@ class FbCommunity {
     required this.name,
     required this.description,
     required this.avatar,
+    required this.category,
   });
 
   // Instancia de FbCommunity desde Firestore
@@ -32,6 +34,7 @@ class FbCommunity {
       name: data?['name'] ?? '',
       description: data?['description'] ?? '',
       avatar: data?['avatar'] ?? '',
+      category: data?['category'] ?? '',
     );
   }
 
@@ -45,6 +48,7 @@ class FbCommunity {
       'name': name,
       'description': description,
       'avatar': avatar,
+      'category': category,
     };
   }
 }

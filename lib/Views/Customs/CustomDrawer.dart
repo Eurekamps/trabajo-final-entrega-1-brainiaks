@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../Statics/DataHolder.dart';
 import '../ChangeProfileView.dart';
 import '../LoginView.dart';
@@ -12,15 +13,40 @@ class CustomDrawer extends StatefulWidget {
 
 class _CustomDrawerState extends State<CustomDrawer> {
   late Future<bool> _profileLoadedFuture;
+  String? _currentImageUrl;
 
   @override
   void initState() {
     super.initState();
-    if (DataHolder().userProfile != null) {
-      _profileLoadedFuture = Future.value(true);
-    } else {
-      _profileLoadedFuture = Future.value(false);
-    }
+    _initializeProfile();
+  }
+
+  void _initializeProfile() {
+    // Inicializa la variable _profileLoadedFuture y obtiene el perfil
+    _profileLoadedFuture = DataHolder().getUserProfile(DataHolder.currentUserId).then((profileExists) {
+      if (profileExists) {
+        // Si el perfil existe, actualizar la URL de la imagen
+        setState(() {
+          _currentImageUrl = _processImageUrl(DataHolder().userProfile?.imagenURL);
+        });
+      }
+      return profileExists;
+    });
+  }
+
+  String? _processImageUrl(String? originalUrl) {
+    if (originalUrl == null || originalUrl.isEmpty) return null;
+
+    // Añade timestamp para evitar cache en la web
+    return '$originalUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+  }
+
+  bool _isValidImageUrl(String url) {
+    // Verifica si la URL tiene una extensión válida para una imagen
+    final validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
+    final uri = Uri.parse(url);
+    final pathExtension = uri.path.split('.').last.toLowerCase();
+    return validExtensions.contains(pathExtension);
   }
 
   @override
@@ -57,12 +83,21 @@ class _CustomDrawerState extends State<CustomDrawer> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
+                      _currentImageUrl == null || !_isValidImageUrl(_currentImageUrl!)
+                          ? const CircleAvatar(
                         radius: 40,
-                        backgroundImage: userProfile.imagenURL != null
-                            ? NetworkImage(userProfile.imagenURL!)
-                            : AssetImage('assets/images/default_avatar.jpg')
-                        as ImageProvider,
+                        backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
+                      )
+                          : CachedNetworkImage(
+                        imageUrl: _currentImageUrl!,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => const CircularProgressIndicator(),
+                        errorWidget: (context, url, error) => const CircleAvatar(
+                          radius: 40,
+                          backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Text(
@@ -78,9 +113,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
                 ListTile(
                   leading: const Icon(Icons.home),
                   title: const Text('Inicio'),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
+                  onTap: () => Navigator.pop(context),
                 ),
                 ListTile(
                   leading: const Icon(Icons.person),
@@ -128,5 +161,4 @@ class _CustomDrawerState extends State<CustomDrawer> {
       },
     );
   }
-
 }

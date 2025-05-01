@@ -1,9 +1,14 @@
+import 'dart:io';
+import 'package:mime/mime.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 import '../FBObjects/FbCommunity.dart';
 import '../Statics/DataHolder.dart';
 import '../Statics/FirebaseAdmin.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class CommunityView extends StatefulWidget {
   @override
@@ -14,6 +19,7 @@ class _CommunityViewState extends State<CommunityView> {
   final FirebaseAdmin _firebaseAdmin = DataHolder().fbAdmin;
   String currentUserId = "";
   bool _isLoading = true;
+
   // Nuevas variables para búsqueda y categoría seleccionada
   String selectedCategory = ''; // Almacena la categoría seleccionada
   String searchName = ''; // Almacena el nombre a buscar
@@ -31,36 +37,75 @@ class _CommunityViewState extends State<CommunityView> {
 
   // MÉTODO MODIFICADO: Eliminado el currentUserId de uidParticipants al crear
   Future<void> _createCommunity(String name, String description,
-      String category) async {
+      String category, XFile? imageFile) async {
     try {
       final docRef = FirebaseFirestore.instance.collection('comunidades').doc();
       final newId = docRef.id;
 
-      // Crear la comunidad con el campo 'category'
+      String avatarUrl = '';
+      if (imageFile != null) {
+        avatarUrl = await uploadCommunityAvatar(newId, imageFile) ?? '';
+      }
+
       final newCommunity = FbCommunity(
         id: newId,
         uidCreator: currentUserId,
         uidModders: '',
         uidParticipants: [],
-        // Lista vacía - el creador no se agrega automáticamente como participante
         name: name,
         description: description,
-        avatar: '',
-        category: category, // Añadir el campo de categoría
+        avatar: avatarUrl,
+        category: category,
       );
 
-      // Guardar la comunidad en Firestore
       await _firebaseAdmin.saveFBData(
         collectionPath: 'comunidades',
         data: newCommunity.toFirestore(),
         docId: newId,
       );
 
-      // Añadir la nueva comunidad al DataHolder (para que se actualice la UI)
       DataHolder().addCommunity(newCommunity);
-      setState(() {}); // Refrescar la UI
+      setState(() {});
     } catch (e) {
       print('Error al crear la comunidad: $e');
+    }
+  }
+
+  Future<String?> uploadCommunityAvatar(String communityId, XFile image) async {
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref('imagenes/comunidades/$communityId/avatar.jpg');
+
+      String downloadUrl;
+
+      if (kIsWeb) {
+        final Uint8List imageBytes = await image.readAsBytes();
+        final mimeType = lookupMimeType(image.name);
+
+        final metadata = SettableMetadata(
+          contentType: mimeType ?? 'application/octet-stream',
+          cacheControl: 'public, max-age=31536000',
+        );
+
+        final uploadTask = storageRef.putData(imageBytes, metadata);
+        await uploadTask.whenComplete(() =>
+            print("✅ Avatar de comunidad subido (web)"));
+
+        downloadUrl = await storageRef.getDownloadURL();
+      } else {
+        final file = File(image.path);
+        final uploadTask = storageRef.putFile(file);
+        await uploadTask.whenComplete(() =>
+            print("✅ Avatar de comunidad subido (móvil)"));
+
+        downloadUrl = await storageRef.getDownloadURL();
+      }
+
+      print('📥 URL avatar comunidad: $downloadUrl');
+      return downloadUrl;
+    } catch (e) {
+      print("❌ Error subiendo avatar de comunidad: $e");
+      return null;
     }
   }
 
@@ -217,6 +262,21 @@ class _CommunityViewState extends State<CommunityView> {
               return Card(
                 margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                 child: ListTile(
+                  leading: ClipOval(
+                    child: community.avatar.isNotEmpty
+                        ? Image.network(
+                      community.avatar,
+                      width: 50,
+                      height: 50,
+                      fit: BoxFit.cover,
+                    )
+                        : Container(
+                      width: 50,
+                      height: 50,
+                      color: Colors.grey[300],
+                      child: Icon(Icons.group, size: 30, color: Colors.grey[700]),
+                    ),
+                  ),
                   title: Text(community.name),
                   subtitle: Text(community.description),
                   trailing: showEditAndDelete
@@ -234,10 +294,10 @@ class _CommunityViewState extends State<CommunityView> {
                     ],
                   )
                       : title == "Comunidades a las que pertenezco"
-                      ? _buildLeaveButton(
-                      community) // Aquí agregamos el botón "Abandonar"
+                      ? _buildLeaveButton(community)
                       : _buildJoinButton(community),
                 ),
+
               );
             },
           ),
@@ -322,19 +382,134 @@ class _CommunityViewState extends State<CommunityView> {
               communities: DataHolder().joinedCommunities,
               showEditAndDelete: false,
             ),
-            _buildCommunitySection(
-              title: 'Comunidades Existentes',
-              communities: DataHolder().allCommunities
-                  .where((community) =>
-              !community.uidParticipants.contains(currentUserId) && // Filtro para no incluir las que son del usuario
-                  community.uidCreator != currentUserId && // Filtro para no incluir las que ha creado el usuario
-                  (selectedCategory == null || community.category == selectedCategory) && // Filtro por categoría
-                  (searchName.isEmpty || community.name.toLowerCase().contains(searchName.toLowerCase())) // Filtro por nombre
-              )
-                  .toList(),
-              showEditAndDelete: false,
-            )
+            // StreamBuilder para comunidades existentes
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('comunidades').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
 
+                final allCommunities = snapshot.data!.docs.map((doc) =>
+                    FbCommunity.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>)
+                ).toList();
+
+                final filteredCommunities = allCommunities.where((community) =>
+                !community.uidParticipants.contains(currentUserId) &&
+                    community.uidCreator != currentUserId &&
+                    (selectedCategory.isEmpty || selectedCategory == 'Todas' || community.category == selectedCategory) &&
+                    (searchName.isEmpty || community.name.toLowerCase().contains(searchName.toLowerCase()))
+                ).toList();
+
+                final displayedCommunities = (selectedCategory.isEmpty || selectedCategory == 'Todas') && searchName.isEmpty
+                    ? filteredCommunities.take(5).toList()
+                    : filteredCommunities;
+
+                Icon _getCategoryIcon(String category) {
+                  switch (category) {
+                    case 'Deportes':
+                      return Icon(Icons.sports_soccer, color: Colors.green);
+                    case 'Ocio':
+                      return Icon(Icons.movie, color: Colors.purple);
+                    case 'Negocios':
+                      return Icon(Icons.business_center, color: Colors.orange);
+                    case 'Libros':
+                      return Icon(Icons.menu_book, color: Colors.brown);
+                    default:
+                      return Icon(Icons.category, color: Colors.grey);
+                  }
+                }
+
+                return AnimatedSwitcher(
+                  duration: Duration(milliseconds: 300),
+                  child: Column(
+                    key: ValueKey(selectedCategory + searchName),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Buscar comunidades",
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              decoration: InputDecoration(
+                                hintText: 'Escribe el nombre...',
+                                prefixIcon: Icon(Icons.search),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              ),
+                              onChanged: (value) {
+                                setState(() {
+                                  searchName = value;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "Filtrar por categoría:",
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String>(
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: Colors.grey.shade100,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                                ),
+                              ),
+                              value: selectedCategory.isEmpty ? 'Todas' : selectedCategory,
+                              onChanged: (String? newValue) {
+                                setState(() {
+                                  selectedCategory = (newValue == 'Todas') ? '' : newValue ?? '';
+                                });
+                              },
+                              selectedItemBuilder: (context) {
+                                return ['Todas', 'Deportes', 'Ocio', 'Negocios', 'Libros'].map((category) {
+                                  return Row(
+                                    children: [
+                                      _getCategoryIcon(category),
+                                      const SizedBox(width: 8),
+                                      Text(category),
+                                    ],
+                                  );
+                                }).toList();
+                              },
+                              items: ['Todas', 'Deportes', 'Ocio', 'Negocios', 'Libros'].map((category) {
+                                return DropdownMenuItem<String>(
+                                  value: category,
+                                  child: Row(
+                                    children: [
+                                      _getCategoryIcon(category),
+                                      const SizedBox(width: 8),
+                                      Text(category),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _buildCommunitySection(
+                        title: 'Comunidades Existentes',
+                        communities: displayedCommunities,
+                        showEditAndDelete: false,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -346,15 +521,15 @@ class _CommunityViewState extends State<CommunityView> {
     );
   }
 
+
   void _showCreateCommunityDialog() {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
-
-    // Variable para almacenar la categoría seleccionada
-    String selectedCategory = 'Deportes'; // Valor inicial por defecto
-
-    // Lista de categorías disponibles
+    String selectedCategory = 'Deportes';
     List<String> categories = ['Deportes', 'Ocio', 'Negocios', 'Libros'];
+
+    XFile? selectedImage;
+    Uint8List? imageBytes;
 
     showDialog(
       context: context,
@@ -363,35 +538,81 @@ class _CommunityViewState extends State<CommunityView> {
           title: Text('Crear Comunidad'),
           content: StatefulBuilder(
             builder: (context, setState) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(labelText: 'Nombre de la comunidad'),
-                  ),
-                  TextField(
-                    controller: descriptionController,
-                    decoration: InputDecoration(labelText: 'Descripción de la comunidad'),
-                  ),
-                  // Dropdown para seleccionar la categoría
-                  DropdownButton<String>(
-                    value: selectedCategory,
-                    onChanged: (String? newCategory) {
-                      if (newCategory != null) {
-                        setState(() {
-                          selectedCategory = newCategory;
-                        });
-                      }
-                    },
-                    items: categories.map((String category) {
-                      return DropdownMenuItem<String>(
-                        value: category,
-                        child: Text(category),
-                      );
-                    }).toList(),
-                  ),
-                ],
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () async {
+                        final ImageSource? pickedSource = await showDialog<ImageSource>(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: Text("Seleccionar Imagen"),
+                              content: Text("¿Quieres tomar una foto o seleccionar de la galería?"),
+                              actions: <Widget>[
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(ImageSource.camera),
+                                  child: Text("Tomar Foto"),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(ImageSource.gallery),
+                                  child: Text("Seleccionar de la Galería"),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+
+                        if (pickedSource != null) {
+                          final XFile? file = await ImagePicker().pickImage(source: pickedSource);
+                          if (file != null) {
+                            final bytes = await file.readAsBytes();
+                            setState(() {
+                              selectedImage = file;
+                              imageBytes = bytes;
+                            });
+                          }
+                        }
+                      },
+                      child: ClipOval(
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          color: Colors.grey[300],
+                          child: imageBytes != null
+                              ? Image.memory(imageBytes!, fit: BoxFit.cover)
+                              : Icon(Icons.camera_alt, size: 40, color: Colors.grey[700]),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(labelText: 'Nombre de la comunidad'),
+                    ),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: InputDecoration(labelText: 'Descripción de la comunidad'),
+                    ),
+                    DropdownButton<String>(
+                      value: selectedCategory,
+                      onChanged: (String? newCategory) {
+                        if (newCategory != null) {
+                          setState(() {
+                            selectedCategory = newCategory;
+                          });
+                        }
+                      },
+                      items: categories.map((String category) {
+                        return DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(category),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -405,7 +626,7 @@ class _CommunityViewState extends State<CommunityView> {
                 final name = nameController.text.trim();
                 final description = descriptionController.text.trim();
                 if (name.isNotEmpty && description.isNotEmpty) {
-                  _createCommunity(name, description, selectedCategory);
+                  _createCommunity(name, description, selectedCategory, selectedImage);
                   Navigator.pop(context);
                 }
               },

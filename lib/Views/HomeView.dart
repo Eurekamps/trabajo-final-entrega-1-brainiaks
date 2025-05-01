@@ -1,9 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:triboo/FBObjects/FbCommunity.dart';
 import 'package:triboo/FBObjects/FBPost.dart';
 import 'package:triboo/Statics/DataHolder.dart';
 import 'package:triboo/Views/CreatePostView.dart';
+
 
 class HomeView extends StatefulWidget {
   @override
@@ -212,148 +214,217 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildPostItem(FBPost post) {
+    // Inicializamos los estados de like y reporte directamente en el widget
+    bool isLiked = post.likes > 0;
+    bool isReported = post.reportes > 0;
+
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      elevation: 1,
+      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header del post
-          Padding(
-            padding: EdgeInsets.all(12),
-            child: Row(
-              children: [
-                // Avatar con inicial (mejorado)
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.blue.withOpacity(0.2),
-                  ),
-                  child: Center(
-                    child: Text(
-                      post.autorApodo.isNotEmpty
-                          ? post.autorApodo[0].toUpperCase()
-                          : '?',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.autorApodo,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isMobile = constraints.maxWidth < 600;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    // Avatar
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.grey.shade200,
+                      backgroundImage: (post.autorImagenURL != null && post.autorImagenURL!.isNotEmpty)
+                          ? NetworkImage(post.autorImagenURL!)
+                          : null,
+                      child: (post.autorImagenURL == null || post.autorImagenURL!.isEmpty)
+                          ? Text(
+                        post.autorApodo.isNotEmpty ? post.autorApodo[0].toUpperCase() : '?',
                         style: TextStyle(
+                          color: Colors.blue,
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: 18,
                         ),
+                      )
+                          : null,
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            post.autorApodo,
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            _formatDate(post.fechaCreacion),
+                            style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                          ),
+                        ],
                       ),
-                      Text(
-                        _formatDate(post.fechaCreacion),
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Texto
+              if (post.texto.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Text(
+                    post.texto,
+                    style: TextStyle(fontSize: 15, height: 1.5, color: Colors.grey[800]),
                   ),
                 ),
-              ],
-            ),
-          ),
 
-          // Contenido del post (con márgenes ajustados)
-          if (post.texto.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Text(
-                post.texto,
-                style: TextStyle(
-                  fontSize: 15,
-                  height: 1.4,
+              // Tags
+              if (post.tags != null && post.tags!.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: post.tags!.map((tag) {
+                      return Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          tag,
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
-              ),
-            ),
 
-          // Tags (nuevo)
-          if (post.tags != null && post.tags!.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: post.tags!.map((tag) {
-                  return Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              // Imagen
+              if (post.imagenURL != null && post.imagenURL!.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                  child: Container(
+                    width: double.infinity,
+                    height: MediaQuery.of(context).size.height * 0.4,
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.grey.shade100,
                     ),
-                    child: Text(
-                      tag,
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 12,
-                      ),
+                    child: Image.network(
+                      post.imagenURL!,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(child: Icon(Icons.broken_image, color: Colors.grey[400]));
+                      },
                     ),
-                  );
-                }).toList(),
-              ),
-            ),
+                  ),
+                ),
 
-          // Imagen (con bordes redondeados)
-          if (post.imagenURL != null && post.imagenURL!.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.4,
-                ),
-                child: Image.network(
-                  post.imagenURL!,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 200,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation(Colors.blue),
-                        ),
+              // Botones de Like y Reportar
+              SizedBox(height: 12),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    // Botón de Like
+                    IconButton(
+                      icon: Icon(
+                        isLiked ? Icons.thumb_up : Icons.thumb_up_off_alt,
+                        color: isLiked ? Colors.blue : Colors.grey,
                       ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 200,
-                      color: Colors.grey[100],
-                      child: Center(
-                        child: Icon(Icons.broken_image,
-                          color: Colors.grey[400],
-                          size: 40,
+                      onPressed: () async {
+                        setState(() {
+                          if (isLiked) {
+                            post.likes -= 1; // Disminuir el contador
+                          } else {
+                            post.likes += 1; // Aumentar el contador
+                          }
+                          isLiked = !isLiked;
+                        });
+
+                        // Actualizamos el contador de likes en Firestore
+                        await FirebaseFirestore.instance
+                            .collection('comunidades')
+                            .doc(myComunitys[_selectedCommunityIndex].id) // Usar myComunitys[_selectedCommunityIndex] en lugar de widget.community
+                            .collection('posts')
+                            .doc(post.id)
+                            .update({'likes': post.likes});
+
+                      },
+                    ),
+                    Text('${post.likes} Likes'),
+
+                    Spacer(),
+
+                    // Botón de Reportar
+                    if (!isReported) // Solo mostramos el botón si no ha sido reportado
+                      IconButton(
+                        icon: Icon(
+                          Icons.report_problem,
+                          color: Colors.grey,
                         ),
+                        onPressed: () async {
+                          bool? confirmReport = await showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text('¿Estás seguro?'),
+                              content: Text('¿Quieres reportar este post?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(false),
+                                  child: Text('Cancelar'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(true),
+                                  child: Text('Reportar'),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirmReport == true) {
+                            setState(() {
+                              isReported = true; // Cambiamos el estado a reportado
+                            });
+
+                            // Aumentamos el contador de reportes en Firestore
+                            await FirebaseFirestore.instance
+                                .collection('comunidades')
+                                .doc(myComunitys[_selectedCommunityIndex].id) // Usar myComunitys[_selectedCommunityIndex] en lugar de widget.community
+                                .collection('posts')
+                                .doc(post.id)
+                                .update({
+                              'reportes': FieldValue.increment(1), // Aumentamos el contador
+                            });
+
+
+                            // Después de reportar, el botón desaparece
+                          }
+                        },
                       ),
-                    );
-                  },
+                  ],
                 ),
               ),
-            ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
+
+
 
   String _formatDate(DateTime? date) {
     if (date == null) return '';

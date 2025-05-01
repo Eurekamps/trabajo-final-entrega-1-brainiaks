@@ -37,7 +37,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
   String? _processImageUrl(String? originalUrl) {
     if (originalUrl == null || originalUrl.isEmpty) return null;
 
-    // Añade timestamp para evitar cache en la web
+    // Añadir timestamp para evitar caché en la web
     return '$originalUrl?t=${DateTime.now().millisecondsSinceEpoch}';
   }
 
@@ -64,8 +64,8 @@ class _CustomDrawerState extends State<CustomDrawer> {
             ),
           );
         } else if (snapshot.data == false || DataHolder().userProfile == null) {
-          return Center(
-            child: const Text(
+          return const Center(
+            child: Text(
               'No se encontró el perfil del usuario.',
               style: TextStyle(color: Colors.grey),
             ),
@@ -88,15 +88,17 @@ class _CustomDrawerState extends State<CustomDrawer> {
                         radius: 40,
                         backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
                       )
-                          : CachedNetworkImage(
-                        imageUrl: _currentImageUrl!,
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => const CircularProgressIndicator(),
-                        errorWidget: (context, url, error) => const CircleAvatar(
-                          radius: 40,
-                          backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
+                          : ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: _currentImageUrl!,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => const CircularProgressIndicator(),
+                          errorWidget: (context, url, error) => const CircleAvatar(
+                            radius: 40,
+                            backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),

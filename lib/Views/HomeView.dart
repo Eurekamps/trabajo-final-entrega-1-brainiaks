@@ -6,6 +6,8 @@ import 'package:triboo/FBObjects/FBPost.dart';
 import 'package:triboo/Statics/DataHolder.dart';
 import 'package:triboo/Views/CreatePostView.dart';
 
+import '../FBObjects/FbPerfil.dart';
+
 
 class HomeView extends StatefulWidget {
   @override
@@ -18,10 +20,14 @@ class _HomeViewState extends State<HomeView> {
   List<FBPost> _posts = [];
   bool _isLoading = false;
   final ScrollController _storiesController = ScrollController();
-
+  String? getCurrentUserId() {
+    User? currentUser = FirebaseAuth.instance.currentUser;
+    return currentUser?.uid; // Retorna el UID o null si no está autenticado
+  }
   @override
   void initState() {
     super.initState();
+
     myComunitys = [
       ...DataHolder().createdCommunities,
       ...DataHolder().joinedCommunities.where(
@@ -30,6 +36,7 @@ class _HomeViewState extends State<HomeView> {
           )
       )
     ];
+
     _loadPosts();
   }
 
@@ -215,7 +222,7 @@ class _HomeViewState extends State<HomeView> {
 
   Widget _buildPostItem(FBPost post) {
     // Inicializamos los estados de like y reporte directamente en el widget
-    bool isLiked = post.likes > 0;
+    bool isLiked = post.likedBy.contains(getCurrentUserId());
     bool isReported = post.reportes > 0;
 
     return Card(
@@ -227,6 +234,7 @@ class _HomeViewState extends State<HomeView> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           bool isMobile = constraints.maxWidth < 600;
+
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,26 +353,55 @@ class _HomeViewState extends State<HomeView> {
                         color: isLiked ? Colors.blue : Colors.grey,
                       ),
                       onPressed: () async {
-                        setState(() {
-                          if (isLiked) {
-                            post.likes -= 1; // Disminuir el contador
-                          } else {
-                            post.likes += 1; // Aumentar el contador
-                          }
-                          isLiked = !isLiked;
-                        });
+                        String? currentUserId = getCurrentUserId();
 
-                        // Actualizamos el contador de likes en Firestore
-                        await FirebaseFirestore.instance
+                        if (currentUserId == null) {
+                          // Manejar caso de usuario no autenticado
+                          print("Usuario no autenticado");
+                          return;
+                        }
+
+                        final postRef = FirebaseFirestore.instance
                             .collection('comunidades')
-                            .doc(myComunitys[_selectedCommunityIndex].id) // Usar myComunitys[_selectedCommunityIndex] en lugar de widget.community
+                            .doc(myComunitys[_selectedCommunityIndex].id)
                             .collection('posts')
-                            .doc(post.id)
-                            .update({'likes': post.likes});
+                            .doc(post.id);
+
+                        final postSnapshot = await postRef.get();
+
+                        int currentLikes = postSnapshot['likes'] ?? 0;
+                        List<dynamic> likedBy = postSnapshot['likedBy'] ?? [];
+
+                        bool currentUserLiked = likedBy.contains(currentUserId);
+
+                        if (currentUserLiked) {
+                          currentLikes -= 1;
+                          await postRef.update({
+                            'likes': currentLikes,
+                            'likedBy': FieldValue.arrayRemove([currentUserId]),
+                          });
+                        } else {
+                          currentLikes += 1;
+                          await postRef.update({
+                            'likes': currentLikes,
+                            'likedBy': FieldValue.arrayUnion([currentUserId]),
+                          });
+                        }
+
+                        setState(() {
+                          post.likes = currentLikes;
+                          if (currentUserLiked) {
+                            post.likedBy.remove(currentUserId);
+                          } else {
+                            post.likedBy.add(currentUserId);
+                          }
+                        });
 
                       },
                     ),
                     Text('${post.likes} Likes'),
+
+
 
                     Spacer(),
 

@@ -242,62 +242,136 @@ class _CommunityViewState extends State<CommunityView> {
     required bool showEditAndDelete,
   }) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.blueGrey[900], // Título blanco para contraste
+            ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 12),
           communities.isEmpty
-              ? Text('No hay comunidades en esta sección.')
+              ? const Text(
+            'No hay comunidades en esta sección.',
+            style: TextStyle(color: Colors.grey),
+          )
               : ListView.builder(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: communities.length,
             itemBuilder: (context, index) {
               final community = communities[index];
+
               return Card(
-                margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                child: ListTile(
-                  leading: ClipOval(
-                    child: community.avatar.isNotEmpty
-                        ? Image.network(
-                      community.avatar,
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                    )
-                        : Container(
-                      width: 50,
-                      height: 50,
-                      color: Colors.grey[300],
-                      child: Icon(Icons.group, size: 30, color: Colors.grey[700]),
-                    ),
-                  ),
-                  title: Text(community.name),
-                  subtitle: Text(community.description),
-                  trailing: showEditAndDelete
-                      ? Row(
-                    mainAxisSize: MainAxisSize.min,
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                color: Colors.blueGrey[800], // Fondo oscuro para la tarjeta
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      IconButton(
-                        icon: Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => _showEditCommunityDialog(community),
+                      // Avatar con borde blanco
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.white, // Borde blanco alrededor
+                            width: 2, // Ancho del borde
+                          ),
+                          borderRadius: BorderRadius.circular(50), // Redondeo total
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(50),
+                          child: community.avatar.isNotEmpty
+                              ? Image.network(
+                            community.avatar,
+                            width: 50,
+                            height: 50,
+                            fit: BoxFit.cover,
+                          )
+                              : Container(
+                            width: 50,
+                            height: 50,
+                            color: Colors.grey[600], // Fondo gris oscuro
+                            child: Icon(
+                              Icons.group,
+                              size: 30,
+                              color: Colors.grey[300],
+                            ),
+                          ),
+                        ),
                       ),
-                      IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteCommunity(community.id),
+                      const SizedBox(width: 12),
+
+                      // Content
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              community.name,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white, // Color blanco para el texto
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              community.description.isNotEmpty
+                                  ? community.description
+                                  : 'Sin descripción.',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[300], // Gris más claro
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                if (showEditAndDelete) ...[
+                                  TextButton.icon(
+                                    onPressed: () =>
+                                        _showEditCommunityDialog(community),
+                                    icon: Icon(Icons.edit, color: Colors.blueGrey[400]),
+                                    label: Text(
+                                      'Editar',
+                                      style: TextStyle(color: Colors.blueGrey[400]),
+                                    ),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: () => _deleteCommunity(community.id),
+                                    icon: Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.red[300],
+                                    ),
+                                    label: Text(
+                                      'Eliminar',
+                                      style: TextStyle(color: Colors.red[300]),
+                                    ),
+                                  ),
+                                ] else if (title == "Comunidades a las que pertenezco") ...[
+                                  _buildLeaveButton(community),
+                                ] else ...[
+                                  _buildJoinButton(community),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                  )
-                      : title == "Comunidades a las que pertenezco"
-                      ? _buildLeaveButton(community)
-                      : _buildJoinButton(community),
+                  ),
                 ),
-
               );
             },
           ),
@@ -313,17 +387,32 @@ class _CommunityViewState extends State<CommunityView> {
       return SizedBox.shrink();
     }
 
-    return ElevatedButton(
+    return ElevatedButton.icon(
       onPressed: () => _joinCommunity(community),
-      child: Text('Unirse'),
+      icon: Icon(Icons.group_add),
+      label: Text('Unirse'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green.shade600,
+        foregroundColor: Colors.white,
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        elevation: 2,
+      ),
     );
   }
 
   Widget _buildLeaveButton(FbCommunity community) {
-    return ElevatedButton(
+    return ElevatedButton.icon(
       onPressed: () => _leaveCommunity(community),
-      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-      child: Text('Abandonar', style: TextStyle(color: Colors.white)),
+      icon: Icon(Icons.exit_to_app),
+      label: Text('Abandonar'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.red.shade600,
+        foregroundColor: Colors.white,
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        elevation: 2,
+      ),
     );
   }
 
@@ -365,10 +454,15 @@ class _CommunityViewState extends State<CommunityView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white, // Fondo general blanco
       appBar: AppBar(
-        title: Text('Comunidades'),
+        title: const Text('Comunidades'),
+        elevation: 0,
+        backgroundColor: Colors.blueGrey[900], // Fondo oscuro para el AppBar
+        foregroundColor: Colors.white, // Texto blanco en el AppBar
       ),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 80),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -382,15 +476,13 @@ class _CommunityViewState extends State<CommunityView> {
               communities: DataHolder().joinedCommunities,
               showEditAndDelete: false,
             ),
-            // StreamBuilder para comunidades existentes
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('comunidades').snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
                 final allCommunities = snapshot.data!.docs.map((doc) =>
-                    FbCommunity.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>)
-                ).toList();
+                    FbCommunity.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>)).toList();
 
                 final filteredCommunities = allCommunities.where((community) =>
                 !community.uidParticipants.contains(currentUserId) &&
@@ -406,40 +498,59 @@ class _CommunityViewState extends State<CommunityView> {
                 Icon _getCategoryIcon(String category) {
                   switch (category) {
                     case 'Deportes':
-                      return Icon(Icons.sports_soccer, color: Colors.green);
+                      return Icon(Icons.sports_soccer, color: Colors.greenAccent[400]);
                     case 'Ocio':
-                      return Icon(Icons.movie, color: Colors.purple);
+                      return Icon(Icons.movie, color: Colors.purpleAccent[400]);
                     case 'Negocios':
-                      return Icon(Icons.business_center, color: Colors.orange);
+                      return Icon(Icons.business_center, color: Colors.orangeAccent[400]);
                     case 'Libros':
-                      return Icon(Icons.menu_book, color: Colors.brown);
+                      return Icon(Icons.menu_book, color: Colors.brown[300]);
                     default:
-                      return Icon(Icons.category, color: Colors.grey);
+                      return Icon(Icons.category, color: Colors.grey[400]);
                   }
                 }
 
                 return AnimatedSwitcher(
-                  duration: Duration(milliseconds: 300),
+                  duration: const Duration(milliseconds: 300),
                   child: Column(
                     key: ValueKey(selectedCategory + searchName),
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                      // Sección de búsqueda de comunidades con fondo oscuro
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.blueGrey[900], // Fondo oscuro para el contenedor de búsqueda
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))
+                          ],
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               "Buscar comunidades",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white, // Título blanco
+                              ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             TextField(
                               decoration: InputDecoration(
                                 hintText: 'Escribe el nombre...',
-                                prefixIcon: Icon(Icons.search),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                hintStyle: TextStyle(color: Colors.black45), // Hint en gris suave
+                                prefixIcon: const Icon(Icons.search, color: Colors.black), // Ícono de búsqueda negro
+                                filled: true,
+                                fillColor: Colors.white, // Fondo blanco para el campo de texto
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.blueGrey[700]!),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               ),
                               onChanged: (value) {
                                 setState(() {
@@ -447,24 +558,28 @@ class _CommunityViewState extends State<CommunityView> {
                                 });
                               },
                             ),
-                            const SizedBox(height: 16),
-                            Text(
+                            const SizedBox(height: 20),
+                            const Text(
                               "Filtrar por categoría:",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white70, // Texto suave para categoría
+                              ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 10),
                             DropdownButtonFormField<String>(
                               decoration: InputDecoration(
                                 filled: true,
-                                fillColor: Colors.grey.shade100,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                fillColor: Colors.white, // Fondo blanco para el dropdown
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                  borderSide: BorderSide(color: Colors.blueGrey[700]!), // Bordes suaves
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                                  borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
                                 ),
                               ),
                               value: selectedCategory.isEmpty ? 'Todas' : selectedCategory,
@@ -479,7 +594,10 @@ class _CommunityViewState extends State<CommunityView> {
                                     children: [
                                       _getCategoryIcon(category),
                                       const SizedBox(width: 8),
-                                      Text(category),
+                                      Text(
+                                        category,
+                                        style: TextStyle(color: Colors.black), // Letras negras en el desplegable
+                                      ),
                                     ],
                                   );
                                 }).toList();
@@ -491,7 +609,10 @@ class _CommunityViewState extends State<CommunityView> {
                                     children: [
                                       _getCategoryIcon(category),
                                       const SizedBox(width: 8),
-                                      Text(category),
+                                      Text(
+                                        category,
+                                        style: TextStyle(color: Colors.black), // Letras negras en las opciones
+                                      ),
                                     ],
                                   ),
                                 );
@@ -500,6 +621,7 @@ class _CommunityViewState extends State<CommunityView> {
                           ],
                         ),
                       ),
+                      // Sección de comunidades existentes
                       _buildCommunitySection(
                         title: 'Comunidades Existentes',
                         communities: displayedCommunities,
@@ -515,11 +637,14 @@ class _CommunityViewState extends State<CommunityView> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateCommunityDialog,
-        child: Icon(Icons.add),
+        backgroundColor: Colors.blueAccent,
+        child: const Icon(Icons.add),
         tooltip: 'Crear nueva comunidad',
       ),
     );
   }
+
+
 
 
   void _showCreateCommunityDialog() {

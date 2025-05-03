@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart';
 import 'package:triboo/FBObjects/FbCommunity.dart';
 import 'package:triboo/FBObjects/FBPost.dart';
 import 'package:triboo/Statics/DataHolder.dart';
@@ -222,8 +223,9 @@ class _HomeViewState extends State<HomeView> {
 
   Widget _buildPostItem(FBPost post) {
     // Inicializamos los estados de like y reporte directamente en el widget
-    bool isLiked = post.likedBy.contains(getCurrentUserId());
-    bool isReported = post.reportes > 0;
+    String? currentUserId = getCurrentUserId();
+    bool isLiked = post.likedBy.contains(currentUserId);
+    bool isReported = post.reportedBy.contains(currentUserId);  // Verificar si el usuario ya reportó el post
 
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -235,11 +237,10 @@ class _HomeViewState extends State<HomeView> {
         builder: (context, constraints) {
           bool isMobile = constraints.maxWidth < 600;
 
-
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
+              // Header (avatar y autor)
               Padding(
                 padding: EdgeInsets.all(16),
                 child: Row(
@@ -353,8 +354,6 @@ class _HomeViewState extends State<HomeView> {
                         color: isLiked ? Colors.blue : Colors.grey,
                       ),
                       onPressed: () async {
-                        String? currentUserId = getCurrentUserId();
-
                         if (currentUserId == null) {
                           // Manejar caso de usuario no autenticado
                           print("Usuario no autenticado");
@@ -368,10 +367,8 @@ class _HomeViewState extends State<HomeView> {
                             .doc(post.id);
 
                         final postSnapshot = await postRef.get();
-
                         int currentLikes = postSnapshot['likes'] ?? 0;
                         List<dynamic> likedBy = postSnapshot['likedBy'] ?? [];
-
                         bool currentUserLiked = likedBy.contains(currentUserId);
 
                         if (currentUserLiked) {
@@ -396,13 +393,9 @@ class _HomeViewState extends State<HomeView> {
                             post.likedBy.add(currentUserId);
                           }
                         });
-
                       },
                     ),
                     Text('${post.likes} Likes'),
-
-
-
                     Spacer(),
 
                     // Botón de Reportar
@@ -413,6 +406,15 @@ class _HomeViewState extends State<HomeView> {
                           color: Colors.grey,
                         ),
                         onPressed: () async {
+                          String? currentUserId = getCurrentUserId();
+
+                          if (currentUserId == null) {
+                            // Manejar caso de usuario no autenticado
+                            print("Usuario no autenticado");
+                            return;
+                          }
+
+                          // Mostrar la confirmación de reporte
                           bool? confirmReport = await showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
@@ -432,22 +434,32 @@ class _HomeViewState extends State<HomeView> {
                           );
 
                           if (confirmReport == true) {
+                            // Actualizamos el estado de inmediato antes de la operación de Firestore
                             setState(() {
                               isReported = true; // Cambiamos el estado a reportado
                             });
 
-                            // Aumentamos el contador de reportes en Firestore
-                            await FirebaseFirestore.instance
-                                .collection('comunidades')
-                                .doc(myComunitys[_selectedCommunityIndex].id) // Usar myComunitys[_selectedCommunityIndex] en lugar de widget.community
-                                .collection('posts')
-                                .doc(post.id)
-                                .update({
-                              'reportes': FieldValue.increment(1), // Aumentamos el contador
-                            });
+                            try {
+                              final postRef = FirebaseFirestore.instance
+                                  .collection('comunidades')
+                                  .doc(myComunitys[_selectedCommunityIndex].id)
+                                  .collection('posts')
+                                  .doc(post.id);
 
+                              // Aumentamos el contador de reportes en Firestore
+                              await postRef.update({
+                                'reportes': FieldValue.increment(1), // Aumentamos el contador de reportes
+                                'reportedBy': FieldValue.arrayUnion([currentUserId]), // Agregamos el UID del usuario a la lista de reportados
+                              });
 
-                            // Después de reportar, el botón desaparece
+                              // Ahora actualizamos el estado del post en el widget
+                              setState(() {
+                                post.reportedBy.add(currentUserId); // Añadimos al usuario a la lista local
+                              });
+
+                            } catch (e) {
+                              print('Error al reportar: $e');
+                            }
                           }
                         },
                       ),

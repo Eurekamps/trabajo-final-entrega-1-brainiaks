@@ -12,6 +12,7 @@ class FBPost {
   int reportes; // Contador de reportes
   int likes; // Contador de likes
   List<String> likedBy; // Lista de los UID de los usuarios que han dado like
+  List<String> reportedBy;
 
   FBPost({
     required this.id,
@@ -25,6 +26,7 @@ class FBPost {
     this.reportes = 0, // Inicializa el contador de reportes
     this.likes = 0, // Inicializa el contador de likes
     this.likedBy = const [], // Inicializa la lista de usuarios que dieron like
+    this.reportedBy = const [],
   });
 
   factory FBPost.fromFirestore(
@@ -44,6 +46,7 @@ class FBPost {
       reportes: data?['reportes'] ?? 0, // Cargamos los reportes desde Firestore
       likes: data?['likes'] ?? 0, // Cargamos los likes desde Firestore
       likedBy: List<String>.from(data?['likedBy'] ?? []), // Cargamos la lista de usuarios que dieron like
+      reportedBy: List<String>.from(data?['reportedBy'] ?? []),
     );
   }
 
@@ -59,6 +62,7 @@ class FBPost {
       'reportes': reportes, // Guardamos los reportes
       'likes': likes, // Guardamos los likes
       'likedBy': likedBy, // Guardamos la lista de usuarios que dieron like
+      'reportedBy': reportedBy,
     };
   }
 }

@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-
+import 'package:mime/mime.dart';
 import '../FBObjects/FbPerfil.dart';
 import '../Statics/DataHolder.dart';
 import 'LoadingView.dart';
@@ -90,9 +90,11 @@ class _ProfileUserViewState extends State<ProfileUserView> {
       if (kIsWeb) {
         // Web: Convertir a Uint8List y subir con `putData`
         final Uint8List imageBytes = await image.readAsBytes();
+        final mimeType = lookupMimeType(image.name); // ej. 'image/png', 'image/jpeg', etc.
+
         final metadata = SettableMetadata(
-          contentType: 'image/jpeg', // Asegurar tipo MIME correcto
-          cacheControl: 'public, max-age=31536000', // Opcional, mejora cacheo
+          contentType: mimeType ?? 'application/octet-stream',
+          cacheControl: 'public, max-age=31536000',
         );
 
         final uploadTask = storageRef.putData(imageBytes, metadata);

@@ -1,9 +1,14 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart';
 import 'package:triboo/FBObjects/FbCommunity.dart';
 import 'package:triboo/FBObjects/FBPost.dart';
 import 'package:triboo/Statics/DataHolder.dart';
 import 'package:triboo/Views/CreatePostView.dart';
+
+import '../FBObjects/FbPerfil.dart';
+
 
 class HomeView extends StatefulWidget {
   @override
@@ -16,10 +21,14 @@ class _HomeViewState extends State<HomeView> {
   List<FBPost> _posts = [];
   bool _isLoading = false;
   final ScrollController _storiesController = ScrollController();
-
+  String? getCurrentUserId() {
+    User? currentUser = FirebaseAuth.instance.currentUser;
+    return currentUser?.uid; // Retorna el UID o null si no está autenticado
+  }
   @override
   void initState() {
     super.initState();
+
     myComunitys = [
       ...DataHolder().createdCommunities,
       ...DataHolder().joinedCommunities.where(
@@ -28,6 +37,7 @@ class _HomeViewState extends State<HomeView> {
           )
       )
     ];
+
     _loadPosts();
   }
 
@@ -212,148 +222,258 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildPostItem(FBPost post) {
+    // Inicializamos los estados de like y reporte directamente en el widget
+    String? currentUserId = getCurrentUserId();
+    bool isLiked = post.likedBy.contains(currentUserId);
+    bool isReported = post.reportedBy.contains(currentUserId);  // Verificar si el usuario ya reportó el post
+
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      elevation: 1,
+      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header del post
-          Padding(
-            padding: EdgeInsets.all(12),
-            child: Row(
-              children: [
-                // Avatar con inicial (mejorado)
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.blue.withOpacity(0.2),
-                  ),
-                  child: Center(
-                    child: Text(
-                      post.autorApodo.isNotEmpty
-                          ? post.autorApodo[0].toUpperCase()
-                          : '?',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.autorApodo,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isMobile = constraints.maxWidth < 600;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header (avatar y autor)
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    // Avatar
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.grey.shade200,
+                      backgroundImage: (post.autorImagenURL != null && post.autorImagenURL!.isNotEmpty)
+                          ? NetworkImage(post.autorImagenURL!)
+                          : null,
+                      child: (post.autorImagenURL == null || post.autorImagenURL!.isEmpty)
+                          ? Text(
+                        post.autorApodo.isNotEmpty ? post.autorApodo[0].toUpperCase() : '?',
                         style: TextStyle(
+                          color: Colors.blue,
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: 18,
                         ),
+                      )
+                          : null,
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            post.autorApodo,
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            _formatDate(post.fechaCreacion),
+                            style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                          ),
+                        ],
                       ),
-                      Text(
-                        _formatDate(post.fechaCreacion),
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Texto
+              if (post.texto.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Text(
+                    post.texto,
+                    style: TextStyle(fontSize: 15, height: 1.5, color: Colors.grey[800]),
                   ),
                 ),
-              ],
-            ),
-          ),
 
-          // Contenido del post (con márgenes ajustados)
-          if (post.texto.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Text(
-                post.texto,
-                style: TextStyle(
-                  fontSize: 15,
-                  height: 1.4,
+              // Tags
+              if (post.tags != null && post.tags!.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: post.tags!.map((tag) {
+                      return Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          tag,
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
-              ),
-            ),
 
-          // Tags (nuevo)
-          if (post.tags != null && post.tags!.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: post.tags!.map((tag) {
-                  return Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              // Imagen
+              if (post.imagenURL != null && post.imagenURL!.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                  child: Container(
+                    width: double.infinity,
+                    height: MediaQuery.of(context).size.height * 0.4,
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.grey.shade100,
                     ),
-                    child: Text(
-                      tag,
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 12,
-                      ),
+                    child: Image.network(
+                      post.imagenURL!,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(child: Icon(Icons.broken_image, color: Colors.grey[400]));
+                      },
                     ),
-                  );
-                }).toList(),
-              ),
-            ),
+                  ),
+                ),
 
-          // Imagen (con bordes redondeados)
-          if (post.imagenURL != null && post.imagenURL!.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.4,
-                ),
-                child: Image.network(
-                  post.imagenURL!,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 200,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation(Colors.blue),
-                        ),
+              // Botones de Like y Reportar
+              SizedBox(height: 12),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    // Botón de Like
+                    IconButton(
+                      icon: Icon(
+                        isLiked ? Icons.thumb_up : Icons.thumb_up_off_alt,
+                        color: isLiked ? Colors.blue : Colors.grey,
                       ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 200,
-                      color: Colors.grey[100],
-                      child: Center(
-                        child: Icon(Icons.broken_image,
-                          color: Colors.grey[400],
-                          size: 40,
+                      onPressed: () async {
+                        if (currentUserId == null) {
+                          // Manejar caso de usuario no autenticado
+                          print("Usuario no autenticado");
+                          return;
+                        }
+
+                        final postRef = FirebaseFirestore.instance
+                            .collection('comunidades')
+                            .doc(myComunitys[_selectedCommunityIndex].id)
+                            .collection('posts')
+                            .doc(post.id);
+
+                        final postSnapshot = await postRef.get();
+                        int currentLikes = postSnapshot['likes'] ?? 0;
+                        List<dynamic> likedBy = postSnapshot['likedBy'] ?? [];
+                        bool currentUserLiked = likedBy.contains(currentUserId);
+
+                        if (currentUserLiked) {
+                          currentLikes -= 1;
+                          await postRef.update({
+                            'likes': currentLikes,
+                            'likedBy': FieldValue.arrayRemove([currentUserId]),
+                          });
+                        } else {
+                          currentLikes += 1;
+                          await postRef.update({
+                            'likes': currentLikes,
+                            'likedBy': FieldValue.arrayUnion([currentUserId]),
+                          });
+                        }
+
+                        setState(() {
+                          post.likes = currentLikes;
+                          if (currentUserLiked) {
+                            post.likedBy.remove(currentUserId);
+                          } else {
+                            post.likedBy.add(currentUserId);
+                          }
+                        });
+                      },
+                    ),
+                    Text('${post.likes} Likes'),
+                    Spacer(),
+
+                    // Botón de Reportar
+                    if (!isReported) // Solo mostramos el botón si no ha sido reportado
+                      IconButton(
+                        icon: Icon(
+                          Icons.report_problem,
+                          color: Colors.grey,
                         ),
+                        onPressed: () async {
+                          String? currentUserId = getCurrentUserId();
+
+                          if (currentUserId == null) {
+                            // Manejar caso de usuario no autenticado
+                            print("Usuario no autenticado");
+                            return;
+                          }
+
+                          // Mostrar la confirmación de reporte
+                          bool? confirmReport = await showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text('¿Estás seguro?'),
+                              content: Text('¿Quieres reportar este post?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(false),
+                                  child: Text('Cancelar'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(true),
+                                  child: Text('Reportar'),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirmReport == true) {
+                            // Actualizamos el estado de inmediato antes de la operación de Firestore
+                            setState(() {
+                              isReported = true; // Cambiamos el estado a reportado
+                            });
+
+                            try {
+                              final postRef = FirebaseFirestore.instance
+                                  .collection('comunidades')
+                                  .doc(myComunitys[_selectedCommunityIndex].id)
+                                  .collection('posts')
+                                  .doc(post.id);
+
+                              // Aumentamos el contador de reportes en Firestore
+                              await postRef.update({
+                                'reportes': FieldValue.increment(1), // Aumentamos el contador de reportes
+                                'reportedBy': FieldValue.arrayUnion([currentUserId]), // Agregamos el UID del usuario a la lista de reportados
+                              });
+
+                              // Ahora actualizamos el estado del post en el widget
+                              setState(() {
+                                post.reportedBy.add(currentUserId); // Añadimos al usuario a la lista local
+                              });
+
+                            } catch (e) {
+                              print('Error al reportar: $e');
+                            }
+                          }
+                        },
                       ),
-                    );
-                  },
+                  ],
                 ),
               ),
-            ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
+
+
 
   String _formatDate(DateTime? date) {
     if (date == null) return '';

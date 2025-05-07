@@ -44,8 +44,16 @@ class _LoginViewState extends State<LoginView> {
 
       // Verificar si el perfil existe (ya está en DataHolder)
       if (DataHolder().userProfile != null) {
-        // Si el perfil existe, redirigir a la vista principal
+        // Si el perfil existe, imprimir los datos del perfil
+        final userProfile = DataHolder().userProfile;
         print("Perfil cargado exitosamente desde Firestore.");
+        print("Datos del perfil:");
+        print("Nombre: ${userProfile?.nombre}");
+        print("Apodo: ${userProfile?.apodo}");
+        print("Fecha de cumpleaños: ${userProfile?.cumple}");
+        print("URL de la imagen: ${userProfile?.imagenURL}");
+
+        // Redirigir a la vista principal
         Navigator.pushReplacementNamed(context, "/HomeView");
       } else {
         // Si no existe el perfil, redirigir a la vista para completar el perfil
@@ -58,6 +66,7 @@ class _LoginViewState extends State<LoginView> {
       setState(() => errorMessage = 'Error inesperado: ${e.toString()}');
     }
   }
+
 
 
   // Función para limpiar los campos de entrada y los errores

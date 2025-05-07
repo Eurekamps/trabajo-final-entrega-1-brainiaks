@@ -1,0 +1,2 @@
+C:/Users/nickv/AndroidStudioProjects/trabajo-final-entrega-1-brainiaks/android/app/.cxx/Debug/17p5o163/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/nickv/AndroidStudioProjects/trabajo-final-entrega-1-brainiaks/android/app/.cxx/Debug/17p5o163/x86_64/CMakeFiles/rebuild_cache.dir

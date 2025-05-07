@@ -476,163 +476,163 @@ class _CommunityViewState extends State<CommunityView> {
               communities: DataHolder().joinedCommunities,
               showEditAndDelete: false,
             ),
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('comunidades').snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('comunidades').snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-                final allCommunities = snapshot.data!.docs.map((doc) =>
-                    FbCommunity.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>)).toList();
+            final allCommunities = snapshot.data!.docs.map((doc) =>
+                FbCommunity.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>)).toList();
 
-                final filteredCommunities = allCommunities.where((community) =>
-                !community.uidParticipants.contains(currentUserId) &&
-                    community.uidCreator != currentUserId &&
-                    (selectedCategory.isEmpty || selectedCategory == 'Todas' || community.category == selectedCategory) &&
-                    (searchName.isEmpty || community.name.toLowerCase().contains(searchName.toLowerCase()))
-                ).toList();
+            final filteredCommunities = allCommunities.where((community) =>
+            !community.uidParticipants.contains(currentUserId) &&
+                community.uidCreator != currentUserId &&
+                (selectedCategory.isEmpty || selectedCategory == 'Todas' || community.category == selectedCategory) &&
+                (searchName.isEmpty || community.name.toLowerCase().contains(searchName.toLowerCase()))
+            ).toList();
 
-                final displayedCommunities = (selectedCategory.isEmpty || selectedCategory == 'Todas') && searchName.isEmpty
-                    ? filteredCommunities.take(5).toList()
-                    : filteredCommunities;
+            final displayedCommunities = (selectedCategory.isEmpty || selectedCategory == 'Todas') && searchName.isEmpty
+                ? filteredCommunities.take(5).toList()
+                : filteredCommunities;
 
-                Icon _getCategoryIcon(String category) {
-                  switch (category) {
-                    case 'Deportes':
-                      return Icon(Icons.sports_soccer, color: Colors.greenAccent[400]);
-                    case 'Ocio':
-                      return Icon(Icons.movie, color: Colors.purpleAccent[400]);
-                    case 'Negocios':
-                      return Icon(Icons.business_center, color: Colors.orangeAccent[400]);
-                    case 'Libros':
-                      return Icon(Icons.menu_book, color: Colors.brown[300]);
-                    default:
-                      return Icon(Icons.category, color: Colors.grey[400]);
-                  }
-                }
+            Icon _getCategoryIcon(String category) {
+              switch (category) {
+                case 'Deportes':
+                  return Icon(Icons.sports_soccer, color: Colors.greenAccent[400]);
+                case 'Ocio':
+                  return Icon(Icons.movie, color: Colors.purpleAccent[400]);
+                case 'Negocios':
+                  return Icon(Icons.business_center, color: Colors.orangeAccent[400]);
+                case 'Libros':
+                  return Icon(Icons.menu_book, color: Colors.brown[300]);
+                default:
+                  return Icon(Icons.category, color: Colors.grey[400]);
+              }
+            }
 
-                return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: Column(
-                    key: ValueKey(selectedCategory + searchName),
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Sección de búsqueda de comunidades con fondo oscuro
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.blueGrey[900], // Fondo oscuro para el contenedor de búsqueda
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))
-                          ],
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Sección de búsqueda de comunidades con fondo oscuro
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blueGrey[900], // Fondo oscuro para el contenedor de búsqueda
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Buscar comunidades",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white, // Título blanco
+                          ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Buscar comunidades",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white, // Título blanco
-                              ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Escribe el nombre...',
+                            hintStyle: TextStyle(color: Colors.black45), // Hint en gris suave
+                            prefixIcon: const Icon(Icons.search, color: Colors.black), // Ícono de búsqueda negro
+                            filled: true,
+                            fillColor: Colors.white, // Fondo blanco para el campo de texto
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.blueGrey[700]!),
                             ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              decoration: InputDecoration(
-                                hintText: 'Escribe el nombre...',
-                                hintStyle: TextStyle(color: Colors.black45), // Hint en gris suave
-                                prefixIcon: const Icon(Icons.search, color: Colors.black), // Ícono de búsqueda negro
-                                filled: true,
-                                fillColor: Colors.white, // Fondo blanco para el campo de texto
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: Colors.blueGrey[700]!),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              ),
-                              onChanged: (value) {
-                                setState(() {
-                                  searchName = value;
-                                });
-                              },
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              searchName = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          "Filtrar por categoría:",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white70, // Texto suave para categoría
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white, // Fondo blanco para el dropdown
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.blueGrey[700]!), // Bordes suaves
                             ),
-                            const SizedBox(height: 20),
-                            const Text(
-                              "Filtrar por categoría:",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white70, // Texto suave para categoría
-                              ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
                             ),
-                            const SizedBox(height: 10),
-                            DropdownButtonFormField<String>(
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: Colors.white, // Fondo blanco para el dropdown
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: Colors.blueGrey[700]!), // Bordes suaves
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
-                                ),
-                              ),
-                              value: selectedCategory.isEmpty ? 'Todas' : selectedCategory,
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  selectedCategory = (newValue == 'Todas') ? '' : newValue ?? '';
-                                });
-                              },
-                              selectedItemBuilder: (context) {
-                                return ['Todas', 'Deportes', 'Ocio', 'Negocios', 'Libros'].map((category) {
-                                  return Row(
-                                    children: [
-                                      _getCategoryIcon(category),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        category,
-                                        style: TextStyle(color: Colors.black), // Letras negras en el desplegable
-                                      ),
-                                    ],
-                                  );
-                                }).toList();
-                              },
-                              items: ['Todas', 'Deportes', 'Ocio', 'Negocios', 'Libros'].map((category) {
-                                return DropdownMenuItem<String>(
-                                  value: category,
-                                  child: Row(
-                                    children: [
-                                      _getCategoryIcon(category),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        category,
-                                        style: TextStyle(color: Colors.black), // Letras negras en las opciones
-                                      ),
-                                    ],
+                          ),
+                          value: selectedCategory.isEmpty ? 'Todas' : selectedCategory,
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              selectedCategory = (newValue == 'Todas') ? '' : newValue ?? '';
+                            });
+                          },
+                          selectedItemBuilder: (context) {
+                            return ['Todas', 'Deportes', 'Ocio', 'Negocios', 'Libros'].map((category) {
+                              return Row(
+                                children: [
+                                  _getCategoryIcon(category),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    category,
+                                    style: TextStyle(color: Colors.black), // Letras negras en el desplegable
                                   ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
+                                ],
+                              );
+                            }).toList();
+                          },
+                          items: ['Todas', 'Deportes', 'Ocio', 'Negocios', 'Libros'].map((category) {
+                            return DropdownMenuItem<String>(
+                              value: category,
+                              child: Row(
+                                children: [
+                                  _getCategoryIcon(category),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    category,
+                                    style: TextStyle(color: Colors.black), // Letras negras en las opciones
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
                         ),
-                      ),
-                      // Sección de comunidades existentes
-                      _buildCommunitySection(
-                        title: 'Comunidades Existentes',
-                        communities: displayedCommunities,
-                        showEditAndDelete: false,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                );
-              },
-            ),
-          ],
+                  // Sección de comunidades existentes
+                  _buildCommunitySection(
+                    title: 'Comunidades Existentes',
+                    communities: displayedCommunities,
+                    showEditAndDelete: false,
+                  ),
+                ],
+              ),
+            );
+          },
+        )
+
+        ],
         ),
       ),
       floatingActionButton: FloatingActionButton(

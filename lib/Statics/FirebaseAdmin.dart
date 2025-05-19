@@ -74,6 +74,27 @@ class FirebaseAdmin{
     }
   }
 
+  Future<void> loadUserProfile({
+    required String uid,
+    required Function(String error) onError,
+  }) async {
+    try {
+      final data = await fetchFBData(
+        collectionPath: 'users', // Asegúrate que esta es tu colección de perfiles
+        docId: uid,
+      );
+
+      if (data != null && data.exists) {
+        DataHolder().userProfile = FbPerfil.fromFirestore(data, null);
+      } else {
+        DataHolder().userProfile = null;
+      }
+    } catch (e) {
+      print("Error al cargar el perfil: $e");
+      onError("Error al cargar el perfil: ${e.toString()}");
+    }
+  }
+
   String _getAuthErrorMessage(String code) {
     switch (code) {
       case 'user-not-found':

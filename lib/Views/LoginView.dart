@@ -6,6 +6,8 @@ import '../FBObjects/FbPerfil.dart';
 import '../Statics/DataHolder.dart';
 import '../Statics/FirebaseAdmin.dart';
 import 'LoadingView.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class LoginView extends StatefulWidget {
   @override
@@ -67,6 +69,56 @@ class _LoginViewState extends State<LoginView> {
     }
   }
 
+  // Login con Google
+  Future<void> signInWithGoogle() async {
+    try {
+      UserCredential userCredential;
+
+      if (kIsWeb) {
+        // 🖥️ WEB: usar signInWithPopup
+        GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        userCredential = await FirebaseAuth.instance.signInWithPopup(googleProvider);
+      } else {
+        // 📱 ANDROID / iOS: usar GoogleSignIn normal
+        final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+        if (googleUser == null) {
+          setState(() => errorMessage = "Login cancelado por el usuario");
+          return;
+        }
+
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      }
+
+      final uid = userCredential.user?.uid;
+      print("✅ Google login UID: $uid");
+
+      // Intentar cargar perfil desde Firestore
+      await FirebaseAdmin().loadUserProfile(
+        uid: uid!,
+        onError: (error) => setState(() => errorMessage = error),
+      );
+
+      if (DataHolder().userProfile != null) {
+        Navigator.pushReplacementNamed(context, "/HomeView");
+      } else {
+        Navigator.pushReplacementNamed(context, "/ProfileUserView");
+      }
+    } on FirebaseAuthException catch (e) {
+      print("🔥 FirebaseAuthException: ${e.code} - ${e.message}");
+      setState(() => errorMessage = "Error: ${e.message}");
+    } catch (e) {
+      print("❌ Error general durante login con Google: $e");
+      setState(() => errorMessage = "Error al iniciar sesión con Google");
+    }
+  }
+
 
 
   // Función para limpiar los campos de entrada y los errores
@@ -77,6 +129,8 @@ class _LoginViewState extends State<LoginView> {
       errorMessage = '';
     });
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -181,7 +235,21 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ],
               ),
+
+              SizedBox(height: 12),
+
+              ElevatedButton.icon(
+                icon: FaIcon(FontAwesomeIcons.google),
+                label: Text("Login con Google"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                onPressed: signInWithGoogle,
+              ),
+
               SizedBox(height: 16),
+
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pushNamed("/RegisterView");

@@ -12,7 +12,20 @@
           "package_name": "com.BrainiaKs"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "148113514149-9lr5ggnq3jg0nju4sevc0cg835eal2r7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.BrainiaKs",
+            "certificate_hash": "4794ec8cc3f11a5e9ec5ca7c8b5a4a4f16313ac1"
+          }
+        },
+        {
+          "client_id": "148113514149-1q2r5tqkb9b3mn35mahaul5am08ft1af.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBkzija6ihf8OXUJP95_OqwvvLZdw0ADNk"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "148113514149-1q2r5tqkb9b3mn35mahaul5am08ft1af.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "148113514149-1ekif7qtk69s0qfk1tmgqvqkc1hc131p.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.brainiaKs.triboo"
+              }
+            }
+          ]
         }
       }
     },
@@ -31,7 +56,12 @@
           "package_name": "com.brainiaKs.triboo"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "148113514149-1q2r5tqkb9b3mn35mahaul5am08ft1af.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBkzija6ihf8OXUJP95_OqwvvLZdw0ADNk"
@@ -39,7 +69,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "148113514149-1q2r5tqkb9b3mn35mahaul5am08ft1af.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "148113514149-1ekif7qtk69s0qfk1tmgqvqkc1hc131p.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.brainiaKs.triboo"
+              }
+            }
+          ]
         }
       }
     }

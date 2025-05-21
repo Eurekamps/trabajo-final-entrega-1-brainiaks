@@ -132,6 +132,39 @@ class _LoginViewState extends State<LoginView> {
 
 
 
+  void resetPassword(BuildContext context) async {
+    if (tecUser.text.isEmpty || !tecUser.text.contains('@')) {
+      setState(() {
+        errorMessage = 'Introduce tu correo para recuperar la contraseña.';
+      });
+      return;
+    }
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: tecUser.text.trim());
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text('Correo enviado'),
+          content: Text('Hemos enviado un enlace de recuperación a tu correo electrónico.'),
+          actions: [
+            TextButton(
+              child: Text('OK'),
+              onPressed: () => Navigator.of(context).pop(),
+            )
+          ],
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      print("🔐 Error al recuperar contraseña: ${e.code} - ${e.message}");
+      setState(() {
+        errorMessage = 'Error: ${e.message}';
+      });
+    }
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -212,6 +245,17 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ),
               SizedBox(height: 20),
+              // 🔽 AÑADE ESTE BOTÓN AQUÍ 🔽
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => resetPassword(context),
+                  child: Text(
+                    "¿Olvidaste tu contraseña?",
+                    style: TextStyle(color: Colors.lightBlueAccent),
+                  ),
+                ),
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

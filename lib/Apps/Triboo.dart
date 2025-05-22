@@ -2,8 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-
-
 import 'package:triboo/Views/HomeView.dart';
 import 'package:triboo/Views/HomerView.dart';
 import 'package:triboo/Views/LoginView.dart';
@@ -11,6 +9,7 @@ import 'package:triboo/Views/ProfileUserView.dart';
 import 'package:triboo/Views/RegisterView.dart';
 import 'package:triboo/Views/SplashView.dart';
 
+import '../Theme/AppTheme.dart';
 import '../localization/app_localizations.dart';
 
 
@@ -33,7 +32,12 @@ class Triboo extends StatelessWidget {
 
       routes: rutasNavegacion,
       initialRoute: '/SplashView',
-      theme: themeProvider.isDarkMode ? ThemeData.dark() : ThemeData.light(),
+
+      // 👇 CAMBIADO: uso de temas personalizados
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+
       debugShowCheckedModeBanner: false, // Oculta el banner de debug
 
       localizationsDelegates: const [
@@ -60,13 +64,16 @@ class Triboo extends StatelessWidget {
     return app;
   }
 }
-
-// Proveedor de temas
 class ThemeProvider extends ChangeNotifier {
   bool isDarkMode = false;
 
   void toggleTheme() {
     isDarkMode = !isDarkMode;
-    notifyListeners(); // Notificar a los widgets para que se actualicen
+    notifyListeners();
+  }
+
+  void setTheme(bool isDark) {
+    isDarkMode = isDark;
+    notifyListeners();
   }
 }

@@ -16,6 +16,6 @@ class AppColors {
   static const Color darkCard = Color(0xFF1C2B2B);          // Fondo oscuro para tarjetas, suave
 
   // 🧭 Extras
-  static const Color borderLight = Color(0xFFCBD4D3);       // Bordes claros suaves
-  static const Color borderDark = Color(0xFF2A3B3B);        // Bordes oscuros
+  static const Color borderLight = Color(0xFF2A3B3B);       // Bordes claros suaves
+  static const Color borderDark = Color(0xFFCBD4D3);        // Bordes oscuros
 }

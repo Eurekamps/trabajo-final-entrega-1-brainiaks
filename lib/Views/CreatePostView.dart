@@ -224,6 +224,8 @@ class _CreatePostViewState extends State<CreatePostView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -250,14 +252,13 @@ class _CreatePostViewState extends State<CreatePostView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
+                        color: theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
+                            color: theme.shadowColor.withOpacity(0.05),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -266,10 +267,11 @@ class _CreatePostViewState extends State<CreatePostView> {
                       child: TextField(
                         controller: _messageController,
                         maxLines: null,
-                        decoration: const InputDecoration.collapsed(
+                        decoration: InputDecoration.collapsed(
                           hintText: '¿Qué quieres compartir?',
+                          hintStyle: TextStyle(color: theme.hintColor),
                         ),
-                        style: const TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 16, color: theme.textTheme.bodyMedium?.color),
                       ),
                     ),
 
@@ -281,19 +283,13 @@ class _CreatePostViewState extends State<CreatePostView> {
                             ? Image.memory(
                           _imageBytes!,
                           width: double.infinity,
-                          height: MediaQuery
-                              .of(context)
-                              .size
-                              .height * 0.35,
+                          height: MediaQuery.of(context).size.height * 0.35,
                           fit: BoxFit.cover,
                         )
                             : Image.file(
                           File(_imageFile!.path),
                           width: double.infinity,
-                          height: MediaQuery
-                              .of(context)
-                              .size
-                              .height * 0.35,
+                          height: MediaQuery.of(context).size.height * 0.35,
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -304,15 +300,12 @@ class _CreatePostViewState extends State<CreatePostView> {
                       onTap: _selectImage,
                       child: Row(
                         children: [
-                          const Icon(Icons.add_a_photo, color: Colors
-                              .blueAccent),
+                          Icon(Icons.add_a_photo, color: theme.colorScheme.primary),
                           const SizedBox(width: 8),
                           Text(
-                            _imageFile == null
-                                ? 'Añadir imagen'
-                                : 'Cambiar imagen',
+                            _imageFile == null ? 'Añadir imagen' : 'Cambiar imagen',
                             style: TextStyle(
-                              color: Colors.blueAccent,
+                              color: theme.colorScheme.primary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -321,10 +314,12 @@ class _CreatePostViewState extends State<CreatePostView> {
                     ),
 
                     const SizedBox(height: 24),
-                    const Text(
+                    Text(
                       'Etiquetas:',
                       style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.black87),
+                        fontWeight: FontWeight.bold,
+                        color: theme.textTheme.bodyLarge?.color ?? Colors.black87,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Wrap(
@@ -335,11 +330,12 @@ class _CreatePostViewState extends State<CreatePostView> {
                           label: Text(tag),
                           selected: isSelected,
                           onSelected: (_) => _toggleTag(tag),
-                          selectedColor: Colors.blue.shade100,
-                          backgroundColor: Colors.grey.shade200,
+                          selectedColor: theme.colorScheme.primary.withOpacity(0.2),
+                          backgroundColor: theme.colorScheme.surfaceVariant,
                           labelStyle: TextStyle(
-                            color: isSelected ? Colors.blue.shade800 : Colors
-                                .black54,
+                            color: isSelected
+                                ? theme.colorScheme.primary
+                                : theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -375,28 +371,26 @@ class _CreatePostViewState extends State<CreatePostView> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.background,
                 border: Border(
-                  top: BorderSide(color: Colors.grey.shade300),
+                  top: BorderSide(color: theme.dividerColor),
                 ),
               ),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.emoji_emotions_outlined),
-                    color: Colors.grey,
+                    icon: Icon(Icons.emoji_emotions_outlined, color: theme.iconTheme.color),
                     onPressed: _toggleEmojiPicker,
                   ),
                   const Spacer(),
                   ElevatedButton.icon(
                     onPressed: _publishMessage,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
+                      backgroundColor: theme.colorScheme.primary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     ),
                     icon: const Icon(Icons.send, color: Colors.white),
                     label: const Text(
@@ -415,4 +409,5 @@ class _CreatePostViewState extends State<CreatePostView> {
       ),
     );
   }
+
 }

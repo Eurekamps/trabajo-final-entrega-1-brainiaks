@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../Apps/Triboo.dart';
+import '../../Theme/AppColors.dart';
 
 class CustomConfiguration extends StatefulWidget {
   @override
@@ -9,73 +10,80 @@ class CustomConfiguration extends StatefulWidget {
 }
 
 class _CustomConfigurationState extends State<CustomConfiguration> {
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Configuración'),
-        backgroundColor: Colors.blueGrey[800],
+        backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+        iconTheme: IconThemeData(color: isDark ? AppColors.darkText : AppColors.lightText),
+        titleTextStyle: theme.textTheme.titleLarge?.copyWith(
+          color: isDark ? AppColors.darkText : AppColors.lightText,
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sección para cambiar la contraseña
             ListTile(
-              leading: const Icon(Icons.lock),
-              title: const Text('Cambiar Contraseña'),
+              leading: Icon(Icons.lock, color: theme.iconTheme.color),
+              title: Text('Cambiar Contraseña', style: theme.textTheme.bodyMedium),
               onTap: () {
-                // Navegar a la pantalla de cambio de contraseña
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => ChangePasswordScreen()),
                 );
               },
             ),
-            const Divider(),
+            Divider(color: isDark ? AppColors.borderDark : AppColors.borderLight),
 
-            // Otras opciones de configuración
             ListTile(
-              leading: const Icon(Icons.notifications),
-              title: const Text('Notificaciones'),
+              leading: Icon(Icons.notifications, color: theme.iconTheme.color),
+              title: Text('Notificaciones', style: theme.textTheme.bodyMedium),
               onTap: () {
-                // Navegar a la configuración de notificaciones
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => NotificationSettingsScreen()),
                 );
               },
             ),
-            const Divider(),
+            Divider(color: isDark ? AppColors.borderDark : AppColors.borderLight),
 
-            // Opción para cambiar el tema de la aplicación
             ListTile(
-              leading: const Icon(Icons.color_lens),
-              title: const Text('Cambiar Tema'),
+              leading: Icon(Icons.color_lens, color: theme.iconTheme.color),
+              title: Text('Cambiar Tema', style: theme.textTheme.bodyMedium),
               onTap: () {
-                // Lógica para cambiar el tema
                 showDialog(
                   context: context,
                   builder: (context) {
                     return AlertDialog(
-                      title: const Text('Selecciona un Tema'),
+                      backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
+                      title: Text('Selecciona un Tema', style: theme.textTheme.titleLarge?.copyWith(
+                        color: isDark ? AppColors.darkText : AppColors.lightText,
+                      )),
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
                           ListTile(
-                            title: const Text('Claro'),
+                            title: Text('Claro', style: theme.textTheme.bodyMedium?.copyWith(
+                              color: isDark ? AppColors.darkText : AppColors.lightText,
+                            )),
                             onTap: () {
-                              // Cambiar a tema claro
-                              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+                              Provider.of<ThemeProvider>(context, listen: false).setTheme(false);
                               Navigator.of(context).pop();
                             },
                           ),
                           ListTile(
-                            title: const Text('Oscuro'),
+                            title: Text('Oscuro', style: theme.textTheme.bodyMedium?.copyWith(
+                              color: isDark ? AppColors.darkText : AppColors.lightText,
+                            )),
                             onTap: () {
-                              // Cambiar a tema oscuro
-                              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+                              Provider.of<ThemeProvider>(context, listen: false).setTheme(true);
                               Navigator.of(context).pop();
                             },
                           ),
@@ -86,7 +94,7 @@ class _CustomConfigurationState extends State<CustomConfiguration> {
                           onPressed: () {
                             Navigator.of(context).pop();
                           },
-                          child: const Text('Cerrar'),
+                          child: Text('Cerrar', style: TextStyle(color: AppColors.primary)),
                         ),
                       ],
                     );

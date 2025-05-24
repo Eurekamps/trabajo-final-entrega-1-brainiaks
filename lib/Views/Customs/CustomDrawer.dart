@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../Statics/DataHolder.dart';
+import '../../Theme/AppColors.dart';
 import '../ChangeProfileView.dart';
 import '../LoginView.dart';
 import 'CustomConfiguration.dart';
@@ -49,118 +50,115 @@ class _CustomDrawerState extends State<CustomDrawer> {
     return validExtensions.contains(pathExtension);
   }
 
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return FutureBuilder<bool>(
       future: _profileLoadedFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: CircularProgressIndicator(
+              color: AppColors.primary, // color principal del tema
+            ),
+          );
         } else if (snapshot.hasError) {
           return Center(
             child: Text(
               'Error al cargar el perfil: ${snapshot.error}',
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: Colors.red.shade400),
             ),
           );
         } else if (snapshot.data == false || DataHolder().userProfile == null) {
-          return const Center(
+          return Center(
             child: Text(
               'No se encontró el perfil del usuario.',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6)),
             ),
           );
         } else {
           final userProfile = DataHolder().userProfile!;
           return Drawer(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                DrawerHeader(
-                  decoration: BoxDecoration(
-                    color: Colors.blueGrey[800],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _currentImageUrl == null || !_isValidImageUrl(_currentImageUrl!)
-                          ? const CircleAvatar(
-                        radius: 40,
-                        backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
-                      )
-                          : ClipOval(
-                        child: CachedNetworkImage(
-                          imageUrl: _currentImageUrl!,
-                          width: 80,
-                          height: 80,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => const CircularProgressIndicator(),
-                          errorWidget: (context, url, error) => const CircleAvatar(
-                            radius: 40,
-                            backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
+            child: Container(
+              color: theme.scaffoldBackgroundColor, // fondo según el tema
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  DrawerHeader(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkCard : AppColors.lightCard,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _currentImageUrl == null || !_isValidImageUrl(_currentImageUrl!)
+                            ? CircleAvatar(
+                          radius: 40,
+                          backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
+                        )
+                            : ClipOval(
+                          child: CachedNetworkImage(
+                            imageUrl: _currentImageUrl!,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => CircularProgressIndicator(color: AppColors.primary),
+                            errorWidget: (context, url, error) => CircleAvatar(
+                              radius: 40,
+                              backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        userProfile.apodo ?? "Sin apodo",
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
+                        const SizedBox(height: 10),
+                        Text(
+                          userProfile.apodo ?? "Sin apodo",
+                          style: TextStyle(
+                            color: isDark ? AppColors.darkText.withOpacity(0.7) : AppColors.lightText.withOpacity(0.7),
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.home),
-                  title: const Text('Inicio'),
-                  onTap: () => Navigator.pop(context),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.person),
-                  title: const Text('Perfil'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChangeProfileView(),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.settings),
-                  title: const Text('Configuración'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CustomConfiguration(),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.logout),
-                  title: const Text('Cerrar Sesión'),
-                  onTap: () async {
-                    await FirebaseAuth.instance.signOut();
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => LoginView(),
-                      ),
-                    );
-                  },
-                ),
-              ],
+                  ListTile(
+                    leading: Icon(Icons.home, color: theme.iconTheme.color),
+                    title: Text('Inicio', style: theme.textTheme.bodyMedium),
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.person, color: theme.iconTheme.color),
+                    title: Text('Perfil', style: theme.textTheme.bodyMedium),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => ChangeProfileView()));
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.settings, color: theme.iconTheme.color),
+                    title: Text('Configuración', style: theme.textTheme.bodyMedium),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => CustomConfiguration()));
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.logout, color: theme.iconTheme.color),
+                    title: Text('Cerrar Sesión', style: theme.textTheme.bodyMedium),
+                    onTap: () async {
+                      await FirebaseAuth.instance.signOut();
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginView()));
+                    },
+                  ),
+                ],
+              ),
             ),
           );
         }
       },
     );
   }
+
 }

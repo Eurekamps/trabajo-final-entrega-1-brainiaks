@@ -8,6 +8,7 @@ import 'package:triboo/Statics/DataHolder.dart';
 import 'package:triboo/Views/CreatePostView.dart';
 
 import '../FBObjects/FbPerfil.dart';
+import '../Theme/AppColors.dart';
 
 
 class HomeView extends StatefulWidget {
@@ -78,20 +79,21 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Triboo'),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        automaticallyImplyLeading: false,
-      ),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Column(
         children: [
           // Sección de Comunidades (Historias)
           _buildCommunitiesStories(),
 
-          // Divisor
-          Divider(height: 1, thickness: 1),
+          // Divisor con estilo del tema
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: theme.dividerColor,
+          ),
 
           // Sección de Posts
           Expanded(
@@ -99,10 +101,13 @@ class _HomeViewState extends State<HomeView> {
           ),
         ],
       ),
+
+      // Botón flotante estilizado
       floatingActionButton: FloatingActionButton(
         onPressed: _navigateToCreatePost,
-        child: Icon(Icons.add, color: Colors.white),
-        backgroundColor: Colors.blue,
+        child: const Icon(Icons.add),
+        backgroundColor: theme.floatingActionButtonTheme.backgroundColor,
+        foregroundColor: theme.floatingActionButtonTheme.foregroundColor,
       ),
     );
   }
@@ -135,8 +140,9 @@ class _HomeViewState extends State<HomeView> {
   }
   Widget _buildStoryItem(FbCommunity community, int index) {
     final isSelected = _selectedCommunityIndex == index;
+    final theme = Theme.of(context);
 
-    return GestureDetector( // Envuelve todo el contenido en un GestureDetector
+    return GestureDetector(
       onTap: () => _onCommunitySelected(index),
       child: SizedBox(
         width: 84,
@@ -144,18 +150,28 @@ class _HomeViewState extends State<HomeView> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Avatar con borde
+            // Avatar con borde usando colores del tema
             Container(
-              padding: EdgeInsets.all(2),
+              padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: isSelected
-                    ? LinearGradient(colors: [Colors.blue, Colors.purple])
-                    : LinearGradient(colors: [Colors.grey.shade300, Colors.grey.shade400]),
+                    ? LinearGradient(
+                  colors: [
+                    AppColors.primary,
+                    theme.colorScheme.secondary,
+                  ],
+                )
+                    : LinearGradient(
+                  colors: [
+                    theme.dividerColor.withOpacity(0.3),
+                    theme.dividerColor.withOpacity(0.5),
+                  ],
+                ),
               ),
               child: CircleAvatar(
                 radius: 30,
-                backgroundColor: Colors.white,
+                backgroundColor: theme.cardColor,
                 child: CircleAvatar(
                   radius: 28,
                   backgroundImage: NetworkImage(community.avatar),
@@ -163,17 +179,19 @@ class _HomeViewState extends State<HomeView> {
               ),
             ),
 
-            SizedBox(height: 6),
+            const SizedBox(height: 6),
 
-            // Nombre de la comunidad
+            // Nombre de la comunidad con estilos del tema
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 2),
               child: Text(
                 community.name,
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? Colors.blue : Colors.black,
+                  color: isSelected
+                      ? AppColors.primary
+                      : theme.textTheme.bodyMedium?.color ?? Colors.black,
                   height: 1.2,
                 ),
                 maxLines: 2,
@@ -188,8 +206,14 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildBody() {
+    final theme = Theme.of(context);
+
     if (_isLoading) {
-      return Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(
+          color: theme.colorScheme.primary, // indicador con color principal
+        ),
+      );
     }
 
     if (_posts.isEmpty) {
@@ -197,13 +221,17 @@ class _HomeViewState extends State<HomeView> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.feed, size: 50, color: Colors.grey),
-            SizedBox(height: 16),
+            Icon(
+              Icons.feed,
+              size: 50,
+              color: theme.disabledColor, // color para iconos deshabilitados/placeholder
+            ),
+            const SizedBox(height: 16),
             Text(
               'No hay posts en esta comunidad',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: theme.disabledColor), // texto gris adaptado al tema
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
           ],
         ),
       );
@@ -211,8 +239,9 @@ class _HomeViewState extends State<HomeView> {
 
     return RefreshIndicator(
       onRefresh: _loadPosts,
+      color: theme.colorScheme.primary, // color del spinner al refrescar
       child: ListView.builder(
-        padding: EdgeInsets.only(bottom: 20),
+        padding: const EdgeInsets.only(bottom: 20),
         itemCount: _posts.length,
         itemBuilder: (context, index) {
           return _buildPostItem(_posts[index]);
@@ -221,18 +250,21 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
+
   Widget _buildPostItem(FBPost post) {
-    // Inicializamos los estados de like y reporte directamente en el widget
     String? currentUserId = getCurrentUserId();
     bool isLiked = post.likedBy.contains(currentUserId);
-    bool isReported = post.reportedBy.contains(currentUserId);  // Verificar si el usuario ya reportó el post
+    bool isReported = post.reportedBy.contains(currentUserId);
+
+    final theme = Theme.of(context);
 
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
+      color: theme.cardColor,
       child: LayoutBuilder(
         builder: (context, constraints) {
           bool isMobile = constraints.maxWidth < 600;
@@ -242,13 +274,12 @@ class _HomeViewState extends State<HomeView> {
             children: [
               // Header (avatar y autor)
               Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    // Avatar
                     CircleAvatar(
                       radius: 22,
-                      backgroundColor: Colors.grey.shade200,
+                      backgroundColor: theme.colorScheme.surface,
                       backgroundImage: (post.autorImagenURL != null && post.autorImagenURL!.isNotEmpty)
                           ? NetworkImage(post.autorImagenURL!)
                           : null,
@@ -256,26 +287,33 @@ class _HomeViewState extends State<HomeView> {
                           ? Text(
                         post.autorApodo.isNotEmpty ? post.autorApodo[0].toUpperCase() : '?',
                         style: TextStyle(
-                          color: Colors.blue,
+                          color: theme.colorScheme.primary,
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
                         ),
                       )
                           : null,
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             post.autorApodo,
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                              color: theme.textTheme.bodyMedium?.color,
+                            ),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
                             _formatDate(post.fechaCreacion),
-                            style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                            style: TextStyle(
+                              color: theme.textTheme.bodySmall?.color ?? theme.disabledColor,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -284,34 +322,38 @@ class _HomeViewState extends State<HomeView> {
                 ),
               ),
 
-              // Texto
+              // Texto del post
               if (post.texto.isNotEmpty)
                 Padding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   child: Text(
                     post.texto,
-                    style: TextStyle(fontSize: 15, height: 1.5, color: Colors.grey[800]),
+                    style: TextStyle(
+                      fontSize: 15,
+                      height: 1.5,
+                      color: theme.textTheme.bodyMedium?.color,
+                    ),
                   ),
                 ),
 
               // Tags
               if (post.tags != null && post.tags!.isNotEmpty)
                 Padding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   child: Wrap(
                     spacing: 8,
                     runSpacing: 6,
                     children: post.tags!.map((tag) {
                       return Container(
-                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
+                          color: theme.colorScheme.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
                           tag,
                           style: TextStyle(
-                            color: Colors.blue,
+                            color: theme.colorScheme.primary,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -324,38 +366,37 @@ class _HomeViewState extends State<HomeView> {
               // Imagen
               if (post.imagenURL != null && post.imagenURL!.isNotEmpty)
                 ClipRRect(
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
                   child: Container(
                     width: double.infinity,
                     height: MediaQuery.of(context).size.height * 0.4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                    ),
+                    color: theme.colorScheme.surface,
                     child: Image.network(
                       post.imagenURL!,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
-                        return Center(child: Icon(Icons.broken_image, color: Colors.grey[400]));
+                        return Center(
+                          child: Icon(Icons.broken_image, color: theme.disabledColor),
+                        );
                       },
                     ),
                   ),
                 ),
 
+              const SizedBox(height: 12),
+
               // Botones de Like y Reportar
-              SizedBox(height: 12),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   children: [
-                    // Botón de Like
                     IconButton(
                       icon: Icon(
-                        isLiked ? Icons.thumb_up : Icons.thumb_up_off_alt,
-                        color: isLiked ? Colors.blue : Colors.grey,
+                        isLiked ? Icons.favorite : Icons.favorite_border,
+                        color: isLiked ? Colors.redAccent : theme.disabledColor,
                       ),
                       onPressed: () async {
                         if (currentUserId == null) {
-                          // Manejar caso de usuario no autenticado
                           print("Usuario no autenticado");
                           return;
                         }
@@ -395,26 +436,24 @@ class _HomeViewState extends State<HomeView> {
                         });
                       },
                     ),
-                    Text('${post.likes} Likes'),
-                    Spacer(),
+                    Text(
+                      '${post.likes} Likes',
+                      style: TextStyle(color: theme.textTheme.bodyMedium?.color),
+                    ),
+                    const Spacer(),
 
-                    // Botón de Reportar
-                    if (!isReported) // Solo mostramos el botón si no ha sido reportado
+                    if (!isReported)
                       IconButton(
                         icon: Icon(
-                          Icons.report_problem,
-                          color: Colors.grey,
+                          Icons.warning_amber_rounded,
+                          color: Colors.orangeAccent,
                         ),
                         onPressed: () async {
-                          String? currentUserId = getCurrentUserId();
-
                           if (currentUserId == null) {
-                            // Manejar caso de usuario no autenticado
                             print("Usuario no autenticado");
                             return;
                           }
 
-                          // Mostrar la confirmación de reporte
                           bool? confirmReport = await showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
@@ -434,9 +473,8 @@ class _HomeViewState extends State<HomeView> {
                           );
 
                           if (confirmReport == true) {
-                            // Actualizamos el estado de inmediato antes de la operación de Firestore
                             setState(() {
-                              isReported = true; // Cambiamos el estado a reportado
+                              isReported = true;
                             });
 
                             try {
@@ -446,17 +484,14 @@ class _HomeViewState extends State<HomeView> {
                                   .collection('posts')
                                   .doc(post.id);
 
-                              // Aumentamos el contador de reportes en Firestore
                               await postRef.update({
-                                'reportes': FieldValue.increment(1), // Aumentamos el contador de reportes
-                                'reportedBy': FieldValue.arrayUnion([currentUserId]), // Agregamos el UID del usuario a la lista de reportados
+                                'reportes': FieldValue.increment(1),
+                                'reportedBy': FieldValue.arrayUnion([currentUserId]),
                               });
 
-                              // Ahora actualizamos el estado del post en el widget
                               setState(() {
-                                post.reportedBy.add(currentUserId); // Añadimos al usuario a la lista local
+                                post.reportedBy.add(currentUserId);
                               });
-
                             } catch (e) {
                               print('Error al reportar: $e');
                             }

@@ -9,6 +9,7 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.lightBackground,
       primaryColor: AppColors.primary,
       cardColor: AppColors.lightCard,
+      dividerColor: AppColors.borderLight, // 👉 agregado
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.lightBackground,
         foregroundColor: AppColors.lightText,
@@ -25,7 +26,7 @@ class AppTheme {
       ),
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
-        secondary: AppColors.primary, // Para minimalismo, mismo color de acento
+        secondary: AppColors.primary,
         background: AppColors.lightBackground,
         surface: AppColors.lightCard,
         onBackground: AppColors.lightText,
@@ -41,6 +42,7 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.darkBackground,
       primaryColor: AppColors.primary,
       cardColor: AppColors.darkCard,
+      dividerColor: AppColors.borderDark, // 👉 agregado
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.darkBackground,
         foregroundColor: AppColors.darkText,

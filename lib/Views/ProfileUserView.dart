@@ -12,7 +12,7 @@ import 'package:mime/mime.dart';
 import '../FBObjects/FbPerfil.dart';
 import '../Statics/DataHolder.dart';
 import 'LoadingView.dart';
-
+import '../Theme/AppColors.dart';
 class ProfileUserView extends StatefulWidget {
   @override
   State<ProfileUserView> createState() => _ProfileUserViewState();
@@ -194,130 +194,199 @@ class _ProfileUserViewState extends State<ProfileUserView> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme
+        .of(context)
+        .colorScheme;
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.blueGrey[900],
+      backgroundColor: colorScheme.background,
       appBar: AppBar(
-        title: Text(
-          "Perfil de Usuario",
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: Colors.blueGrey[800],
-        iconTheme: IconThemeData(color: Colors.white),
+        backgroundColor: colorScheme.background,
+        elevation: 0,
+        iconTheme: theme.iconTheme,
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Crear Perfil",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              SizedBox(height: 20),
-              GestureDetector(
-                onTap: selectImage,
-                child: CircleAvatar(
-                  radius: 50,
-                  backgroundImage: kIsWeb
-                      ? (_imageBytes != null ? MemoryImage(_imageBytes!) : null)
-                      : (profileImage != null ? FileImage(File(profileImage!.path)) : null),
-                  backgroundColor: Colors.white10,
-                  child: (profileImage == null && _imageBytes == null)
-                      ? Icon(Icons.add_a_photo, color: Colors.white70)
-                      : null,
-                ),
-              ),
-              SizedBox(height: 16),
-              TextFormField(
-                controller: tecNickname,
-                decoration: InputDecoration(
-                  labelText: 'Apodo',
-                  labelStyle: TextStyle(color: Colors.white70),
-                  border: OutlineInputBorder(),
-                  filled: true,
-                  fillColor: Colors.white10,
-                  prefixIcon: Icon(Icons.person, color: Colors.white70),
-                ),
-                style: TextStyle(color: Colors.white),
-              ),
-              SizedBox(height: 16),
-              TextFormField(
-                controller: tecName,
-                decoration: InputDecoration(
-                  labelText: 'Nombre',
-                  labelStyle: TextStyle(color: Colors.white70),
-                  border: OutlineInputBorder(),
-                  filled: true,
-                  fillColor: Colors.white10,
-                  prefixIcon: Icon(Icons.person, color: Colors.white70),
-                ),
-                style: TextStyle(color: Colors.white),
-              ),
-              SizedBox(height: 16),
-              GestureDetector(
-                onTap: () => selectBirthday(context),
-                child: AbsorbPointer(
-                  child: TextFormField(
-                    decoration: InputDecoration(
-                      labelText: 'Cumpleaños',
-                      labelStyle: TextStyle(color: Colors.white70),
-                      border: OutlineInputBorder(),
-                      filled: true,
-                      fillColor: Colors.white10,
-                      prefixIcon: Icon(Icons.calendar_today, color: Colors.white70),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          double maxWidth = constraints.maxWidth;
+          double horizontalPadding = maxWidth > 600
+              ? 64
+              : 32; // más padding en pantallas grandes
+          double avatarRadius = maxWidth > 600
+              ? 80
+              : 50; // imagen más grande en pantallas grandes
+
+          return Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding, vertical: 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 600),
+                // limita ancho máximo para tablets y web
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Transform.translate(
+                      offset: const Offset(0, -60),
+                      child: Image.asset(
+                        'assets/images/triboo.png',
+                        height: maxWidth > 600 ? 250 : 180,
+                      ),
                     ),
-                    style: TextStyle(color: Colors.white),
-                    controller: TextEditingController(
-                      text: selectedBirthday != null
-                          ? "${selectedBirthday!.day}/${selectedBirthday!.month}/${selectedBirthday!.year}"
-                          : '',
+                    Text(
+                      "Crear Perfil",
+                      style: TextStyle(
+                        fontSize: maxWidth > 600 ? 36 : 28,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onBackground,
+                      ),
                     ),
-                  ),
+                    SizedBox(height: maxWidth > 600 ? 30 : 20),
+                    GestureDetector(
+                      onTap: selectImage,
+                      child: CircleAvatar(
+                        radius: avatarRadius,
+                        backgroundImage: kIsWeb
+                            ? (_imageBytes != null
+                            ? MemoryImage(_imageBytes!)
+                            : null)
+                            : (profileImage != null ? FileImage(
+                            File(profileImage!.path)) : null),
+                        backgroundColor: colorScheme.surface,
+                        child: (profileImage == null && _imageBytes == null)
+                            ? Icon(Icons.add_a_photo,
+                            color: colorScheme.onSurface.withOpacity(0.5),
+                            size: avatarRadius * 0.6)
+                            : null,
+                      ),
+                    ),
+                    SizedBox(height: maxWidth > 600 ? 24 : 16),
+                    _buildTextField(
+                      context,
+                      controller: tecNickname,
+                      label: 'Apodo',
+                      icon: Icons.person,
+                    ),
+                    SizedBox(height: maxWidth > 600 ? 24 : 16),
+                    _buildTextField(
+                      context,
+                      controller: tecName,
+                      label: 'Nombre',
+                      icon: Icons.person,
+                    ),
+                    SizedBox(height: maxWidth > 600 ? 24 : 16),
+                    GestureDetector(
+                      onTap: () => selectBirthday(context),
+                      child: AbsorbPointer(
+                        child: _buildTextField(
+                          context,
+                          controller: TextEditingController(
+                            text: selectedBirthday != null
+                                ? "${selectedBirthday!.day}/${selectedBirthday!
+                                .month}/${selectedBirthday!.year}"
+                                : '',
+                          ),
+                          label: 'Cumpleaños',
+                          icon: Icons.calendar_today,
+                        ),
+                      ),
+                    ),
+                    if (errorMessage.isNotEmpty) ...[
+                      SizedBox(height: 12),
+                      Text(
+                        errorMessage,
+                        style: TextStyle(color: Colors.red, fontSize: 14),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    SizedBox(height: maxWidth > 600 ? 40 : 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(child: _gradientButton(
+                            "Guardar Perfil", FontAwesomeIcons.userEdit,
+                            uploadProfileData)),
+                        SizedBox(width: 16),
+                        Expanded(child: _gradientButton(
+                            "Limpiar", Icons.clear, clearFields)),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              if (errorMessage.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12.0),
-                  child: Text(
-                    errorMessage,
-                    style: TextStyle(color: Colors.red, fontSize: 14),
-                  ),
-                ),
-              SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ElevatedButton.icon(
-                    icon: FaIcon(FontAwesomeIcons.userEdit),
-                    label: Text("Guardar Perfil"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.lightBlueAccent,
-                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    onPressed: uploadProfileData,
-                  ),
-                  ElevatedButton.icon(
-                    icon: Icon(Icons.clear),
-                    label: Text("Limpiar"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent,
-                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    onPressed: clearFields,
-                  ),
-                ],
-              ),
-            ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+
+  Widget _buildTextField(BuildContext context, {
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isPassword = false,
+    bool obscure = false,
+    bool visible = false,
+    VoidCallback? toggleVisibility,
+  }) {
+    final colorScheme = Theme
+        .of(context)
+        .colorScheme;
+
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Container(
+          decoration: BoxDecoration(
+            color: colorScheme.primary.withOpacity(0.1),
+            shape: BoxShape.circle,
           ),
+          margin: const EdgeInsets.all(6),
+          child: Icon(icon, color: colorScheme.primary),
+        ),
+        filled: true,
+        fillColor: colorScheme.surface,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: colorScheme.primary),
+        ),
+        labelStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.8)),
+      ),
+      style: TextStyle(color: colorScheme.onSurface),
+    );
+  }
+
+  Widget _gradientButton(String label, IconData icon, VoidCallback onPressed) {
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.accent],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: FaIcon(icon, size: 16),
+        label: Text(label),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );

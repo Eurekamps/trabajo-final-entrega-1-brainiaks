@@ -67,12 +67,18 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('Triboo', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.grey[900],
-        elevation: 0,
+        title: Text(
+          'Triboo',
+          style: TextStyle(color: theme.appBarTheme.foregroundColor),
+        ),
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        elevation: theme.appBarTheme.elevation,
       ),
       drawer: CustomDrawer(),
       body: Column(
@@ -81,32 +87,63 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
             child: TabBarView(
               controller: _tabController,
               children: [
-                Center(child:_isLoading ? Center(child: CircularProgressIndicator()) : _farLeftScreen),
-                Center(child:_isLoading ? Center(child: CircularProgressIndicator()) : _centerLeftScreen),
-                Center(child:_isLoading ? Center(child: CircularProgressIndicator()) : _trueCenterScreen),
-                Center(child:_isLoading ? Center(child: CircularProgressIndicator()) : _centerRightScreen),
-                Center(child:_isLoading ? Center(child: CircularProgressIndicator()) : _farRightScreen),
+                Center(child: _isLoading ? const CircularProgressIndicator() : _farLeftScreen),
+                Center(child: _isLoading ? const CircularProgressIndicator() : _centerLeftScreen),
+                Center(child: _isLoading ? const CircularProgressIndicator() : _trueCenterScreen),
+                Center(child: _isLoading ? const CircularProgressIndicator() : _centerRightScreen),
+                Center(child: _isLoading ? const CircularProgressIndicator() : _farRightScreen),
               ],
             ),
           ),
         ],
       ),
       bottomNavigationBar: Container(
-        color: Colors.grey[900],
+        color: theme.appBarTheme.backgroundColor,
         child: TabBar(
           controller: _tabController,
-          indicator: BoxDecoration(), // Remove default indicator
+          indicator: const BoxDecoration(), // Sin indicador por defecto
           tabs: [
-            Tab(icon: _tabController.index == 0 ? Icon(Icons.home, size: 32, color: Colors.white) : Icon(Icons.home_outlined, color: Colors.white60)),
-            Tab(icon: _tabController.index == 1 ? Icon(Icons.search, size: 32, color: Colors.white) : Icon(Icons.search_outlined, color: Colors.white60)),
-            Tab(icon: _tabController.index == 2 ? Icon(Icons.local_fire_department, size: 32, color: Colors.white) : Icon(Icons.local_fire_department_outlined, color: Colors.white60)),
-            Tab(icon: _tabController.index == 3 ? Icon(Icons.create_new_folder, size: 32, color: Colors.white) : Icon(Icons.create_new_folder_outlined, color: Colors.white60)),
-            Tab(icon: _tabController.index == 4 ? Icon(Icons.person, size: 32, color: Colors.white) : Icon(Icons.person_outlined,color: Colors.white60)),
+            Tab(icon: Icon(
+              _tabController.index == 0 ? Icons.home : Icons.home_outlined,
+              size: 32,
+              color: _tabController.index == 0
+                  ? theme.iconTheme.color
+                  : theme.iconTheme.color?.withOpacity(0.6),
+            )),
+            Tab(icon: Icon(
+              _tabController.index == 1 ? Icons.search : Icons.search_outlined,
+              size: 32,
+              color: _tabController.index == 1
+                  ? theme.iconTheme.color
+                  : theme.iconTheme.color?.withOpacity(0.6),
+            )),
+            Tab(icon: Icon(
+              _tabController.index == 2 ? Icons.local_fire_department : Icons.local_fire_department_outlined,
+              size: 32,
+              color: _tabController.index == 2
+                  ? theme.iconTheme.color
+                  : theme.iconTheme.color?.withOpacity(0.6),
+            )),
+            Tab(icon: Icon(
+              _tabController.index == 3 ? Icons.create_new_folder : Icons.create_new_folder_outlined,
+              size: 32,
+              color: _tabController.index == 3
+                  ? theme.iconTheme.color
+                  : theme.iconTheme.color?.withOpacity(0.6),
+            )),
+            Tab(icon: Icon(
+              _tabController.index == 4 ? Icons.person : Icons.person_outlined,
+              size: 32,
+              color: _tabController.index == 4
+                  ? theme.iconTheme.color
+                  : theme.iconTheme.color?.withOpacity(0.6),
+            )),
           ],
         ),
       ),
     );
   }
+
 
 }
 

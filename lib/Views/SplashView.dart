@@ -67,8 +67,10 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.amber[200], // Fondo color crema
+      backgroundColor: colorScheme.background,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
@@ -77,39 +79,38 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
             children: [
               Image.asset(
                 'assets/images/triboo.png',
-                height: 200,
+                height: 180,
               ),
-              SizedBox(height: 30),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
               Text(
                 "Cargando...",
                 style: TextStyle(
                   fontSize: 18,
-                  color: Colors.brown[600],
+                  fontWeight: FontWeight.w500,
+                  color: colorScheme.onBackground,
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               LinearProgressIndicator(
                 value: dbPorcentaje,
                 minHeight: 8,
-                backgroundColor: Colors.brown[100],
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.brown[700]!),
+                backgroundColor: colorScheme.surfaceVariant,
+                valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Text(
                 "${(dbPorcentaje * 100).toStringAsFixed(0)}%",
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.brown[500],
+                  color: colorScheme.onSurface.withOpacity(0.8),
                 ),
               ),
-              SizedBox(height: 40),
-              // Imagen rotatoria en lugar de CircularProgressIndicator
+              const SizedBox(height: 40),
               RotationTransition(
                 turns: _controller,
                 child: Image.asset(
                   'assets/images/tomahawk.png',
-                  height: 60, // Ajusta el tamaño de la imagen
+                  height: 60,
                 ),
               ),
             ],

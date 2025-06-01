@@ -1,78 +1,133 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
-import 'ChatDetailScreen.dart';
+import '../Statics/DataHolder.dart';
+import 'ChatScreen.dart';
 
-// Pantalla principal que muestra la lista de chats
+
+
 class ChatListScreenView extends StatefulWidget {
+  const ChatListScreenView({Key? key}) : super(key: key);
+
   @override
-  _ChatListScreenViewState createState() => _ChatListScreenViewState();
+  State<ChatListScreenView> createState() => _ChatListScreenViewState();
 }
 
 class _ChatListScreenViewState extends State<ChatListScreenView> {
-  String searchQuery = ""; // Variable para almacenar el texto ingresado en el campo de búsqueda
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _getUserChatsStream() {
+    return _firestore
+        .collection('users')
+        .doc(DataHolder.currentUserId)
+        .collection('chats')
+        .orderBy('joinedAt', descending: true)
+        .snapshots();
+  }
+
+  Future<Map<String, dynamic>> _getUserData(String userId) async {
+    final doc = await _firestore.collection('users').doc(userId).get();
+    return doc.data() ?? {};
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // AppBar con campo de búsqueda al estilo WhatsApp
       appBar: AppBar(
-        title: TextField(
-          onChanged: (value) {
-            setState(() {
-              // Actualizamos el texto de búsqueda y convertimos a minúsculas
-              searchQuery = value.toLowerCase();
-            });
-          },
-          decoration: InputDecoration(
-            hintText: "Buscar chats...", // Texto de sugerencia en el campo de búsqueda
-            border: InputBorder.none, // Sin borde
-            prefixIcon: Icon(Icons.search, color: Colors.white), // Icono de búsqueda
-            hintStyle: TextStyle(color: Colors.white54), // Estilo del texto de sugerencia
+        title: Text(
+          DataHolder().userProfile!.apodo,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
-          style: TextStyle(color: Colors.white), // Estilo del texto ingresado
         ),
-        backgroundColor: Color(0xFF075E54), // Color del AppBar (verde estilo WhatsApp)
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
       ),
-      // Cuerpo principal de la pantalla que muestra la lista de chats
-      body: StreamBuilder(
-        // Se conecta a la colección 'chats' de Firebase Firestore
-        stream: FirebaseFirestore.instance.collection('chats').snapshots(),
-        builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          // Muestra un indicador de carga mientras los datos están siendo recuperados
-          if (!snapshot.hasData) {
-            return Center(child: CircularProgressIndicator());
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: _getUserChatsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
           }
 
-          // Filtramos los chats según el texto ingresado en el campo de búsqueda
-          final filteredChats = snapshot.data!.docs.where((chat) {
-            final chatName = chat['name'].toString().toLowerCase(); // Nombre del chat en minúsculas
-            return chatName.contains(searchQuery); // Filtra si contiene el texto buscado
-          }).toList();
+          final chatDocs = snapshot.data?.docs ?? [];
 
-          // ListView que muestra la lista de chats
+          if (chatDocs.isEmpty) {
+            return const Center(child: Text("No tienes chats activos."));
+          }
+
           return ListView.builder(
-            itemCount: filteredChats.length, // Número total de chats filtrados
+            itemCount: chatDocs.length,
             itemBuilder: (context, index) {
-              final chat = filteredChats[index]; // Chat actual en la iteración
+              final chatData = chatDocs[index].data();
+              final String otherUserId = chatData['with'];
+              final String chatId = chatData['chatId'];
 
-              return ListTile(
-                title: Text(chat['name']), // Muestra el nombre del chat
-                subtitle: Text(
-                  chat['lastMessage'] ?? "No hay mensajes aún", // Muestra el último mensaje o un texto predeterminado
-                ),
-                trailing: Text(
-                  // Formateamos la hora del último mensaje si existe
-                  chat['lastMessageTime'] != null
-                      ? _formatTimestamp(chat['lastMessageTime'])
-                      : '',
-                ),
-                onTap: () {
-                  // Navega a la pantalla de detalles del chat al hacer clic
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ChatDetailScreen(chatId: chat.id),
+              return FutureBuilder<Map<String, dynamic>>(
+                future: _getUserData(otherUserId),
+                builder: (context, userSnapshot) {
+                  if (!userSnapshot.hasData) {
+                    return const ListTile(
+                      leading: CircleAvatar(child: Icon(Icons.person)),
+                      title: Text("Cargando..."),
+                    );
+                  }
+
+                  final userData = userSnapshot.data!;
+                  final String nombre = userData['nombre'] ?? 'Usuario';
+                  final String imagenURL = userData['imagenURL'] ?? '';
+
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      leading: CircleAvatar(
+                        backgroundImage: imagenURL.isNotEmpty ? NetworkImage(imagenURL) : null,
+                        child: imagenURL.isEmpty ? const Icon(Icons.person) : null,
+                      ),
+                      title: Row(
+                        children: [
+                          Text(
+                            nombre,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '@${userData['apodo'] ?? 'usuario'}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        tooltip: 'Eliminar chat',
+                        onPressed: () async {
+                          await DataHolder().chatAdmin.eliminarChat(chatId);
+                        },
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatScreen(chatId: chatId),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },
@@ -82,12 +137,5 @@ class _ChatListScreenViewState extends State<ChatListScreenView> {
         },
       ),
     );
-  }
-
-  // Método para formatear la fecha/hora del último mensaje usando Timestamp
-  String _formatTimestamp(Timestamp timestamp) {
-    final date = timestamp.toDate(); // Convertimos el Timestamp en un objeto DateTime
-    // Devolvemos el formato HH:MM
-    return "${date.hour}:${date.minute.toString().padLeft(2, '0')}";
   }
 }

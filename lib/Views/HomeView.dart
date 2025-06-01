@@ -7,6 +7,7 @@ import 'package:triboo/FBObjects/FBPost.dart';
 import 'package:triboo/Statics/DataHolder.dart';
 import 'package:triboo/Views/CreatePostView.dart';
 
+
 import '../FBObjects/FbPerfil.dart';
 import '../Theme/AppColors.dart';
 
@@ -299,12 +300,18 @@ class _HomeViewState extends State<HomeView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            post.autorApodo,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                              color: theme.textTheme.bodyMedium?.color,
+                          GestureDetector(
+                            onTap: () {
+                              _mostrarDialogoConversacion(post.autorApodo, post.autorID);
+                            },
+                            child: Text(
+                              post.autorApodo,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                                color: theme.colorScheme.primary,
+                                decoration: TextDecoration.underline,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -508,6 +515,49 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
+  void _mostrarDialogoConversacion(String nombreUsuario, String autorId) {
+    if (autorId == DataHolder.currentUserId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("No puedes enviarte un mensaje a ti mismo.")),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        TextEditingController _mensajeController = TextEditingController();
+
+        return AlertDialog(
+          title: Text('Iniciar conversación con $nombreUsuario'),
+          content: TextField(
+            controller: _mensajeController,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: 'Escribe tu mensaje...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                String mensaje = _mensajeController.text.trim();
+                if (mensaje.isNotEmpty) {
+                  DataHolder().chatAdmin.startChat( DataHolder.currentUserId, autorId, mensaje);
+                  Navigator.of(context).pop();
+                }
+              },
+              child: Text('Enviar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
 
   String _formatDate(DateTime? date) {

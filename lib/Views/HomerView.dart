@@ -73,12 +73,31 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(
-          'Triboo',
-          style: TextStyle(color: theme.appBarTheme.foregroundColor),
-        ),
         backgroundColor: theme.appBarTheme.backgroundColor,
         elevation: theme.appBarTheme.elevation,
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Triboo',
+                style: TextStyle(color: theme.appBarTheme.foregroundColor),
+              ),
+            ),
+            IconButton(
+              icon:  Icon(Icons.chat_outlined),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      fullscreenDialog: false, // por defecto
+                      builder: (_) => Scaffold(
+                        body: ChatListScreenView(),
+                      ),
+                    ),
+                  );
+                }
+            ),
+          ],
+        ),
       ),
       drawer: CustomDrawer(),
       body: Column(

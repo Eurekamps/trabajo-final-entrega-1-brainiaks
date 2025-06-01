@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:triboo/Statics/ChatAdmin.dart';
 import 'package:triboo/Statics/FirebaseAdmin.dart';
 
 
@@ -24,6 +25,7 @@ class DataHolder {
 
   FbPerfil? userProfile;
   FirebaseAdmin fbAdmin = FirebaseAdmin();
+  ChatAdmin chatAdmin = ChatAdmin();
   Uint8List? tempProfileImage;
 
   // Constructor privado

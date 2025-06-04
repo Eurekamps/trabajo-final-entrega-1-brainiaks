@@ -2,6 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../FBObjects/FbMensaje.dart';
 import '../Statics/DataHolder.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -36,11 +39,37 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  Future<void> _enviarMensajeAIA(String chatId, String mensaje) async {
+    final uri = Uri.parse('https://mensajeaia-e5mf2zshgq-uc.a.run.app'); // 🔁 Usa tu URL exacta
+
+    final response = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'chatId': chatId,
+        'mensaje': mensaje,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('✅ Mensaje procesado por IA correctamente');
+    } else {
+      print('❌ Error al procesar con IA: ${response.body}');
+    }
+  }
+
+
+
   Future<void> enviarMensaje() async {
     final String texto = _messageController.text.trim();
     if (texto.isEmpty) return;
+    final isChatWithIA = widget.chatId.contains(DataHolder().BRAINITO_ID);
 
-
+    if (isChatWithIA) {
+      await _enviarMensajeAIA(widget.chatId, texto);
+    }
     final Timestamp ahora = Timestamp.now();
 
     final mensaje = FbMensaje(

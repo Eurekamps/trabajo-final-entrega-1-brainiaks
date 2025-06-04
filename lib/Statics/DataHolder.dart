@@ -24,6 +24,7 @@ class DataHolder {
 
 
   FbPerfil? userProfile;
+  final BRAINITO_ID = "p6KFfTaDH4NkvMTQTOWZr8uRxHo1";
   FirebaseAdmin fbAdmin = FirebaseAdmin();
   ChatAdmin chatAdmin = ChatAdmin();
   Uint8List? tempProfileImage;

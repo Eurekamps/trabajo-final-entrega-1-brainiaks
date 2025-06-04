@@ -31,6 +31,7 @@ class _ChatListScreenViewState extends State<ChatListScreenView> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -135,7 +136,85 @@ class _ChatListScreenViewState extends State<ChatListScreenView> {
             },
           );
         },
+      ),floatingActionButton: FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance
+          .collection('users')
+          .doc(DataHolder().BRAINITO_ID)
+          .get(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || !snapshot.data!.exists) return const SizedBox.shrink();
+
+        final data = snapshot.data!.data() as Map<String, dynamic>;
+        final String? imagenURL = data['imagenURL'];
+
+        return SizedBox(
+          width: 72,
+          height: 72,
+          child: FloatingActionButton(
+            onPressed: () {
+              TextEditingController mensajeController = TextEditingController();
+
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Habla con Brainito"),
+                  content: TextField(
+                    controller: mensajeController,
+                    autofocus: true,
+                    decoration: const InputDecoration(hintText: "¿Qué quieres preguntarle?"),
+                  ),
+                  actions: [
+                    TextButton(
+                      child: const Text("Cancelar"),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    TextButton(
+                      child: const Text("Enviar"),
+                      onPressed: () async {
+                        final mensaje = mensajeController.text.trim();
+                        if (mensaje.isEmpty) return;
+
+                        Navigator.of(context).pop(); // cerrar el diálogo
+
+                        await DataHolder().chatAdmin.startChat(
+                          DataHolder.currentUserId,
+                          DataHolder().BRAINITO_ID,
+                          mensaje,
+                        );
+
+                        final sorted = [DataHolder.currentUserId, DataHolder().BRAINITO_ID]..sort();
+                        final brainitoChatId = "${sorted[0]}_${sorted[1]}";
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatScreen(chatId: brainitoChatId),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            tooltip: 'Hablar con Brainito',
+            child: imagenURL != null && imagenURL.isNotEmpty
+                ? CircleAvatar(
+              backgroundImage: NetworkImage(imagenURL),
+              radius: 28,
+            )
+                : const Icon(Icons.smart_toy, size: 32),
+          ),
+        );
+        },
       ),
     );
   }
+
 }
+
+
+
+
+

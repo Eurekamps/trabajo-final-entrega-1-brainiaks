@@ -53,22 +53,38 @@ class _HomeViewState extends State<HomeView> {
     if (myComunitys.isEmpty) return;
 
     setState(() => _isLoading = true);
-    final communityId = myComunitys[_selectedCommunityIndex].id;
-    print("Cargando posts de comunidad ID: $communityId"); // Debug
 
     try {
-      final postsSnapshot = await FirebaseFirestore.instance
-          .collection('comunidades')
-          .doc(communityId)
-          .collection('posts')
-          .orderBy('fechaCreacion', descending: true)
-          .get();
+      List<FBPost> allPosts = [];
+
+      if (_selectedCommunityIndex == 0) {
+        // ✅ Primer ítem: feed global
+        for (var community in myComunitys) {
+          final snapshot = await FirebaseFirestore.instance
+              .collection('comunidades')
+              .doc(community.id)
+              .collection('posts')
+              .orderBy('fechaCreacion', descending: true)
+              .get();
+
+          allPosts.addAll(snapshot.docs.map((doc) => FBPost.fromFirestore(doc, null)));
+        }
+        allPosts.sort((a, b) => b.fechaCreacion.compareTo(a.fechaCreacion));
+      } else {
+        final communityId = myComunitys[_selectedCommunityIndex - 1].id;
+        final postsSnapshot = await FirebaseFirestore.instance
+            .collection('comunidades')
+            .doc(communityId)
+            .collection('posts')
+            .orderBy('fechaCreacion', descending: true)
+            .get();
+
+        allPosts = postsSnapshot.docs.map((doc) => FBPost.fromFirestore(doc, null)).toList();
+      }
 
       if (mounted) {
         setState(() {
-          _posts = postsSnapshot.docs.map((doc) {
-            return FBPost.fromFirestore(doc, null);
-          }).toList();
+          _posts = allPosts;
           _isLoading = false;
         });
       }
@@ -114,14 +130,13 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildCommunitiesStories() {
-    // Combinar comunidades creadas y unidas (sin duplicados)
     final combinedCommunities = [
+      FbCommunity(id: 'all', name: 'Todo', avatar: '', uidCreator: '', uidModders: '', uidParticipants: [], description: '', category: ''), // ✅ burbuja de feed global
       ...DataHolder().createdCommunities,
       ...DataHolder().joinedCommunities.where(
-              (joined) => !DataHolder().createdCommunities.any(
-                  (created) => created.id == joined.id
-          )
-      )
+            (joined) => !DataHolder().createdCommunities.any(
+                (created) => created.id == joined.id),
+      ),
     ];
 
     if (combinedCommunities.isEmpty) return SizedBox.shrink();
@@ -139,6 +154,7 @@ class _HomeViewState extends State<HomeView> {
       ),
     );
   }
+
   Widget _buildStoryItem(FbCommunity community, int index) {
     final isSelected = _selectedCommunityIndex == index;
     final theme = Theme.of(context);
@@ -447,6 +463,10 @@ class _HomeViewState extends State<HomeView> {
                       '${post.likes} Likes',
                       style: TextStyle(color: theme.textTheme.bodyMedium?.color),
                     ),
+                    IconButton(
+                      icon: Icon(Icons.chat_bubble_outline, color: theme.disabledColor),
+                      onPressed: () => _mostrarComentarios(post),
+                    ),
                     const Spacer(),
 
                     if (!isReported)
@@ -515,6 +535,63 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
+  void _mostrarComentarios(FBPost post) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.5,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 5,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                Text(
+                  'Comentarios del post',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Center(
+                        child: Text(
+                          'Aquí aparecerán los comentarios...',
+                          style: TextStyle(
+                            color: Theme.of(context).disabledColor,
+                            fontSize: 14,
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+
   void _mostrarDialogoConversacion(String nombreUsuario, String autorId) {
     if (autorId == DataHolder.currentUserId) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -576,25 +653,28 @@ class _HomeViewState extends State<HomeView> {
 
   void _onCommunitySelected(int index) {
     if (_selectedCommunityIndex == index) return;
-    print("Comunidad seleccionada: ${myComunitys[index].id}"); // Debug
 
+    print("Índice seleccionado: $index"); // Debug
     setState(() {
       _selectedCommunityIndex = index;
       _posts = [];
     });
+
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadPosts());
   }
 
+
   void _navigateToCreatePost() {
-    if (myComunitys.isEmpty) return;
+    if (_selectedCommunityIndex == 0) return; // En feed global no se puede crear
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CreatePostView(
-          community: myComunitys[_selectedCommunityIndex],
+          community: myComunitys[_selectedCommunityIndex - 1],
         ),
       ),
     ).then((_) => _loadPosts());
   }
+
 }

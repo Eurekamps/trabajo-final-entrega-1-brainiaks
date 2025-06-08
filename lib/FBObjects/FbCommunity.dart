@@ -3,12 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class FbCommunity {
   String id; // UID de la comunidad
   String uidCreator; // UID del creador
-  String uidModders; // UID del moderador
-  List<String> uidParticipants; // Lista de UIDS de los participantes
+  String uidModders; // UIDs de los moderadores (separados por coma)
+  List<String> uidParticipants; // Lista de UIDs de los participantes
   String name; // Nombre de la comunidad
   String description; // Descripción de la comunidad
-  String avatar; // Foto de comunidad
-  String category;
+  String avatar; // URL del avatar
+  String category; // Categoría (Deportes, Libros, etc.)
+  String? password; // Contraseña opcional
 
   FbCommunity({
     required this.id,
@@ -19,29 +20,31 @@ class FbCommunity {
     required this.description,
     required this.avatar,
     required this.category,
+    this.password,
   });
 
-  // Instancia de FbCommunity desde Firestore
   factory FbCommunity.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot) {
-    final data = snapshot.data(); // Obtiene los datos del documento
+    final data = snapshot.data();
+
     return FbCommunity(
-      id: snapshot.id, // Accede al ID del documento
+      id: snapshot.id,
       uidCreator: data?['uidCreator'] ?? '',
       uidModders: data?['uidModders'] ?? '',
       uidParticipants: (data?['uidParticipants'] as List<dynamic>? ?? [])
-          .map((e) => e.toString()) // Convertimos List<dynamic> a List<String>
+          .map((e) => e.toString())
           .toList(),
       name: data?['name'] ?? '',
       description: data?['description'] ?? '',
       avatar: data?['avatar'] ?? '',
       category: data?['category'] ?? '',
+      password: (data != null && data.containsKey('password'))
+          ? data['password'] as String?
+          : null,
     );
   }
 
-  // Convierte esta instancia a un mapa para guardar en Firestore
   Map<String, dynamic> toFirestore() {
-    return {
-      'id':id,
+    final data = {
       'uidCreator': uidCreator,
       'uidModders': uidModders,
       'uidParticipants': uidParticipants,
@@ -50,5 +53,12 @@ class FbCommunity {
       'avatar': avatar,
       'category': category,
     };
+
+    if (password != null && password!.isNotEmpty) {
+      data['password'] = password as Object;
+    }
+
+    return data;
   }
 }
+

@@ -5,6 +5,7 @@ class FBPost {
   String texto;
   String? imagenURL;
   DateTime fechaCreacion;
+  final String comunidadID;
   final String autorID;
   final String autorApodo;
   final String? autorImagenURL;
@@ -19,6 +20,7 @@ class FBPost {
     required this.texto,
     this.imagenURL,
     required this.fechaCreacion,
+    required this.comunidadID,
     required this.autorID,
     required this.autorApodo,
     this.autorImagenURL,
@@ -34,6 +36,11 @@ class FBPost {
       SnapshotOptions? options,
       ) {
     final data = snapshot.data();
+
+    // Extraer el ID de la comunidad desde la ruta del documento
+    final pathSegments = snapshot.reference.path.split("/");
+    String comunidadID = pathSegments.length >= 2 ? pathSegments[1] : '';
+
     return FBPost(
       id: snapshot.id,
       texto: data?['texto'] ?? '',
@@ -43,12 +50,14 @@ class FBPost {
       autorApodo: data?['autorApodo'] ?? 'Anónimo',
       autorImagenURL: data?['autorImagenURL'],
       tags: List<String>.from(data?['tags'] ?? []),
-      reportes: data?['reportes'] ?? 0, // Cargamos los reportes desde Firestore
-      likes: data?['likes'] ?? 0, // Cargamos los likes desde Firestore
-      likedBy: List<String>.from(data?['likedBy'] ?? []), // Cargamos la lista de usuarios que dieron like
+      reportes: data?['reportes'] ?? 0,
+      likes: data?['likes'] ?? 0,
+      likedBy: List<String>.from(data?['likedBy'] ?? []),
       reportedBy: List<String>.from(data?['reportedBy'] ?? []),
+      comunidadID: comunidadID, // obtenido del path
     );
   }
+
 
   Map<String, dynamic> toFirestore() {
     return {

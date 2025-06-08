@@ -1,9 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:triboo/Statics/FirebaseAdmin.dart';
+import 'package:triboo/Views/CommunitySearchView.dart';
 import 'package:triboo/Views/CommunityView.dart';
 import 'package:triboo/Views/Customs/CustomDrawer.dart';
 import 'package:triboo/Views/LoginView.dart';
+import 'package:triboo/Views/MiPerfilView.dart';
+import 'package:triboo/Views/NotificacionesView.dart';
 
 
 import '../Statics/DataHolder.dart';
@@ -22,10 +25,10 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
   bool _isLoading = true;
 
   final Widget _farLeftScreen = HomeView();
-  final Widget _centerLeftScreen = HomeView();
-  final Widget _trueCenterScreen = ChatListScreenView();
-  final Widget _centerRightScreen = CommunityGridView();
-  final Widget _farRightScreen = CommunityView();
+  final Widget _centerLeftScreen = CommunitySearchView();
+  final Widget _trueCenterScreen = CommunityView();
+  final Widget _centerRightScreen = NotificacionesView();
+  final Widget _farRightScreen = MiPerfilView();
 
 
 
@@ -144,7 +147,7 @@ class _HomerViewState extends State<HomerView> with SingleTickerProviderStateMix
                   : theme.iconTheme.color?.withOpacity(0.6),
             )),
             Tab(icon: Icon(
-              _tabController.index == 3 ? Icons.create_new_folder : Icons.create_new_folder_outlined,
+              _tabController.index == 3 ? Icons.notification_important_rounded : Icons.notification_important_outlined,
               size: 32,
               color: _tabController.index == 3
                   ? theme.iconTheme.color

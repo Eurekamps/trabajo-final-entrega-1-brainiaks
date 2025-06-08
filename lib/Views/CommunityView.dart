@@ -1,30 +1,24 @@
 import 'dart:io';
-import 'package:mime/mime.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import '../FBObjects/FbCommunity.dart';
 import '../Statics/DataHolder.dart';
-import '../Statics/FirebaseAdmin.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-
-import '../Theme/AppColors.dart';
+import 'package:mime/mime.dart';
 
 class CommunityView extends StatefulWidget {
+  const CommunityView({Key? key}) : super(key: key);
+
   @override
-  _CommunityViewState createState() => _CommunityViewState();
+  State<CommunityView> createState() => _CommunityViewState();
 }
 
-class _CommunityViewState extends State<CommunityView> {
-  final FirebaseAdmin _firebaseAdmin = DataHolder().fbAdmin;
+class _CommunityViewState extends State<CommunityView> with TickerProviderStateMixin {
   String currentUserId = "";
-  bool _isLoading = true;
-
-  // Nuevas variables para búsqueda y categoría seleccionada
-  String selectedCategory = ''; // Almacena la categoría seleccionada
-  String searchName = ''; // Almacena el nombre a buscar
 
   @override
   void initState() {
@@ -32,14 +26,330 @@ class _CommunityViewState extends State<CommunityView> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       currentUserId = user.uid;
-    } else {
-      print('No hay usuario autenticado');
     }
   }
 
-  // MÉTODO MODIFICADO: Eliminado el currentUserId de uidParticipants al crear
-  Future<void> _createCommunity(String name, String description,
-      String category, XFile? imageFile) async {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final allJoined = DataHolder().joinedCommunities;
+
+    final createdByMe = DataHolder().createdCommunities;
+
+    final moderatedByMe = allJoined.where((c) {
+      final modders = c.uidModders.split(',').map((id) => id.trim()).toSet();
+      return modders.contains(currentUserId);
+    }).toList();
+
+    final joinedOnly = allJoined;
+
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: theme.colorScheme.primary,
+          centerTitle: true,
+          title: const Text(
+            'COMUNIDADES',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+              color: Colors.white,
+            ),
+          ),
+          bottom: TabBar(
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            tabs: const [
+              Tab(text: 'Creadas'),
+              Tab(text: 'Modero'),
+              Tab(text: 'Unido'),
+            ],
+          ),
+        ),
+        backgroundColor: theme.colorScheme.background,
+        body: TabBarView(
+          children: [
+            _buildCommunityListSection("Creadas por mí", createdByMe, theme),
+            _buildCommunityListSection("Comunidades que modero", moderatedByMe, theme),
+            _buildCommunityListSection("Comunidades unidas", joinedOnly, theme),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _showCreateCommunityDialog,
+          backgroundColor: theme.colorScheme.secondary,
+          tooltip: 'Crear nueva comunidad',
+          child: const Icon(Icons.add),
+        ),
+      ),
+    );
+
+  }
+
+  Widget _buildCommunityListSection(String title, List<FbCommunity> communities, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: communities.isEmpty
+          ? Center(
+        child: Text(
+          'No hay comunidades en esta sección.',
+          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
+        ),
+      )
+          : ListView.builder(
+        itemCount: communities.length,
+        itemBuilder: (context, index) {
+          final c = communities[index];
+          return Card(
+            elevation: 3,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            color: theme.colorScheme.surfaceVariant,
+            child: ListTile(
+              leading: ClipOval(
+                child: c.avatar.isNotEmpty
+                    ? Image.network(c.avatar, width: 50, height: 50, fit: BoxFit.cover)
+                    : Container(
+                  width: 50,
+                  height: 50,
+                  color: theme.colorScheme.onSurface.withOpacity(0.1),
+                  child: Icon(Icons.group, size: 30, color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                ),
+              ),
+              title: Text(
+                c.name,
+                style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+              ),
+              subtitle: Text(
+                c.description.isNotEmpty ? c.description : 'Sin descripción.',
+                style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (title == "Creadas por mí" || title == "Comunidades que modero")
+                    IconButton(
+                      icon: const Icon(Icons.settings),
+                      tooltip: 'Gestionar comunidad',
+                      onPressed: () => _openCommunityAdminPanel(c, title == "Creadas por mí"),
+                    ),
+                  IconButton(
+                    icon: Icon(
+                      title == "Creadas por mí" ? Icons.delete_outline : Icons.exit_to_app,
+                      color: title == "Creadas por mí" ? Colors.red : theme.colorScheme.primary,
+                    ),
+                    tooltip: title == "Creadas por mí" ? 'Eliminar' : 'Abandonar',
+                    onPressed: () {
+                      if (title == "Creadas por mí") {
+                        _confirmDeleteCommunity(c);
+                      } else {
+                        _confirmLeaveCommunity(c);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+
+
+  Future<void> _confirmDeleteCommunity(FbCommunity community) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar comunidad'),
+        content: Text('¿Estás seguro de que deseas eliminar "${community.name}"? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      // Lógica de borrado real (simulada)
+      DataHolder().removeCommunity(community.id);
+      setState(() {});
+    }
+  }
+
+  Future<void> _confirmLeaveCommunity(FbCommunity community) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Abandonar comunidad'),
+        content: Text('¿Quieres abandonar la comunidad "${community.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Abandonar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      community.uidParticipants.remove(currentUserId);
+      setState(() {});
+    }
+  }
+
+  void _showCreateCommunityDialog() {
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    String selectedCategory = 'Deportes';
+    List<String> categories = ['Deportes', 'Ocio', 'Negocios', 'Libros'];
+
+    XFile? selectedImage;
+    Uint8List? imageBytes;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+
+        return AlertDialog(
+          backgroundColor: colorScheme.surface,
+          title: Text(
+            'Crear Comunidad',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          content: StatefulBuilder(
+            builder: (context, setState) {
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () async {
+                        final ImageSource? source = await showDialog<ImageSource>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Seleccionar imagen'),
+                            content: const Text('¿Desde dónde quieres obtener la imagen?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, ImageSource.camera),
+                                child: const Text('Cámara'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, ImageSource.gallery),
+                                child: const Text('Galería'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (source != null) {
+                          final file = await ImagePicker().pickImage(source: source);
+                          if (file != null) {
+                            final bytes = await file.readAsBytes();
+                            setState(() {
+                              selectedImage = file;
+                              imageBytes = bytes;
+                            });
+                          }
+                        }
+                      },
+                      child: ClipOval(
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          color: colorScheme.onSurface.withOpacity(0.1),
+                          child: imageBytes != null
+                              ? Image.memory(imageBytes!, fit: BoxFit.cover)
+                              : Icon(Icons.camera_alt, size: 40, color: colorScheme.onSurface.withOpacity(0.6)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Nombre',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: InputDecoration(
+                        labelText: 'Descripción',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'Categoría',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: categories.map((cat) {
+                        return DropdownMenuItem(
+                          value: cat,
+                          child: Text(cat),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            selectedCategory = val;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameController.text.trim();
+                final description = descriptionController.text.trim();
+                if (name.isNotEmpty && description.isNotEmpty) {
+                  _createCommunity(name, description, selectedCategory, selectedImage);
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Crear'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _createCommunity(String name, String description, String category, XFile? imageFile) async {
     try {
       final docRef = FirebaseFirestore.instance.collection('comunidades').doc();
       final newId = docRef.id;
@@ -60,14 +370,13 @@ class _CommunityViewState extends State<CommunityView> {
         category: category,
       );
 
-      await _firebaseAdmin.saveFBData(
-        collectionPath: 'comunidades',
-        data: newCommunity.toFirestore(),
-        docId: newId,
-      );
+      await FirebaseFirestore.instance
+          .collection('comunidades')
+          .doc(newId)
+          .set(newCommunity.toFirestore());
 
       DataHolder().addCommunity(newCommunity);
-      setState(() {});
+      setState(() {}); // refrescar UI
     } catch (e) {
       print('Error al crear la comunidad: $e');
     }
@@ -111,729 +420,111 @@ class _CommunityViewState extends State<CommunityView> {
     }
   }
 
-
-  // Resto de los métodos permanecen exactamente igual...
-  Future<void> _updateCommunity(String id, String newName,
-      String newDescription, String newCategory) async {
-    try {
-      // Buscar la comunidad que vamos a actualizar
-      final communityToUpdate = DataHolder().allCommunities.firstWhere((
-          community) => community.id == id);
-
-      // Crear el objeto de la comunidad con los nuevos valores
-      final updatedCommunity = FbCommunity(
-        id: communityToUpdate.id,
-        uidCreator: communityToUpdate.uidCreator,
-        uidModders: communityToUpdate.uidModders,
-        uidParticipants: communityToUpdate.uidParticipants,
-        name: newName,
-        description: newDescription,
-        avatar: communityToUpdate.avatar,
-        category: newCategory, // Añadir el campo de categoría actualizado
-      );
-
-      // Guardar los cambios en Firestore
-      await _firebaseAdmin.saveFBData(
-        collectionPath: 'comunidades',
-        data: updatedCommunity.toFirestore(),
-        docId: updatedCommunity.id,
-      );
-
-      // Actualizar la comunidad en el DataHolder (para reflejar los cambios en la UI)
-      DataHolder().updateCommunity(updatedCommunity);
-      setState(() {}); // Refrescar la UI
-    } catch (e) {
-      print('Error al actualizar la comunidad: $e');
-    }
-  }
-
-
-  Future<void> _deleteCommunity(String id) async {
-    try {
-      await _firebaseAdmin.deleteFBData(
-        collectionPath: 'comunidades',
-        docId: id,
-      );
-      DataHolder().removeCommunity(id);
-      setState(() {});
-    } catch (e) {
-      print('Error al eliminar la comunidad: $e');
-    }
-  }
-
-  void _showEditCommunityDialog(FbCommunity community) {
-    final nameController = TextEditingController(text: community.name);
-    final descriptionController = TextEditingController(
-        text: community.description);
-
-    // Inicializar el valor de la categoría seleccionada
-    String selectedCategory = community
-        .category; // Suponiendo que 'category' está en FbCommunity
-
-    // Lista de categorías disponibles para seleccionar
-    List<String> categories = [
-      'Deportes',
-      'Ocio',
-      'Negocios',
-      'Libros'
-    ]; // Puedes personalizar esta lista
-
+  void _openCommunityAdminPanel(FbCommunity c, bool isCreator) {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Editar Comunidad'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: 'Nuevo nombre'),
+        return DefaultTabController(
+          length: 2,
+          child: AlertDialog(
+            title: Text(c.name),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const TabBar(tabs: [Tab(text: 'Detalles'), Tab(text: 'Miembros')]),
+                  SizedBox(
+                    height: 300,
+                    child: TabBarView(
+                      children: [
+                        _buildDetailsTab(c, isCreator),
+                        _buildMembersTab(c, isCreator),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              TextField(
-                controller: descriptionController,
-                decoration: InputDecoration(labelText: 'Nueva descripción'),
-              ),
-              // Agregar el DropdownButton para la categoría
-              DropdownButton<String>(
-                value: selectedCategory,
-                onChanged: (String? newCategory) {
-                  if (newCategory != null) {
-                    setState(() {
-                      selectedCategory = newCategory;
-                    });
-                  }
-                },
-                items: categories.map((String category) {
-                  return DropdownMenuItem<String>(
-                    value: category,
-                    child: Text(category),
-                  );
-                }).toList(),
-              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar')),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final newName = nameController.text.trim();
-                final newDescription = descriptionController.text.trim();
-                if (newName.isNotEmpty && newDescription.isNotEmpty) {
-                  // Pasar también la categoría seleccionada al método de actualización
-                  _updateCommunity(
-                      community.id, newName, newDescription, selectedCategory);
-                  Navigator.pop(context);
-                }
-              },
-              child: Text('Guardar cambios'),
-            ),
-          ],
         );
       },
     );
   }
 
+  Widget _buildDetailsTab(FbCommunity c, bool editable) {
+    final nameCtl = TextEditingController(text: c.name);
+    final descCtl = TextEditingController(text: c.description);
 
-  Widget _buildCommunitySection({
-    required String title,
-    required List<FbCommunity> communities,
-    required bool showEditAndDelete,
-  }) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onBackground, // texto principal adaptado
-            ),
-          ),
-          const SizedBox(height: 12),
-          communities.isEmpty
-              ? Text(
-            'No hay comunidades en esta sección.',
-            style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6)),
-          )
-              : ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: communities.length,
-            itemBuilder: (context, index) {
-              final community = communities[index];
-
-              return Card(
-                elevation: 3,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                color: theme.colorScheme.surfaceVariant, // fondo de tarjeta adaptado
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Avatar con borde adaptado
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: theme.colorScheme.primary, // borde con color primario del tema
-                            width: 2,
-                          ),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(50),
-                          child: community.avatar.isNotEmpty
-                              ? Image.network(
-                            community.avatar,
-                            width: 50,
-                            height: 50,
-                            fit: BoxFit.cover,
-                          )
-                              : Container(
-                            width: 50,
-                            height: 50,
-                            color: theme.colorScheme.onSurface.withOpacity(0.1),
-                            child: Icon(
-                              Icons.group,
-                              size: 30,
-                              color: theme.colorScheme.onSurface.withOpacity(0.5),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Contenido
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              community.name,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              community.description.isNotEmpty
-                                  ? community.description
-                                  : 'Sin descripción.',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                if (showEditAndDelete) ...[
-                                  TextButton.icon(
-                                    onPressed: () => _showEditCommunityDialog(community),
-                                    icon: Icon(Icons.edit, color: theme.colorScheme.primary),
-                                    label: Text(
-                                      'Editar',
-                                      style: TextStyle(color: theme.colorScheme.primary),
-                                    ),
-                                  ),
-                                  TextButton.icon(
-                                    onPressed: () => _deleteCommunity(community.id),
-                                    icon: Icon(
-                                      Icons.delete_outline,
-                                      color: theme.colorScheme.error,
-                                    ),
-                                    label: Text(
-                                      'Eliminar',
-                                      style: TextStyle(color: theme.colorScheme.error),
-                                    ),
-                                  ),
-                                ] else if (title == "Comunidades a las que pertenezco") ...[
-                                  _buildLeaveButton(community),
-                                ] else ...[
-                                  _buildJoinButton(community),
-                                ],
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
+    return Column(
+      children: [
+        TextField(controller: nameCtl, decoration: const InputDecoration(labelText: 'Nombre')),
+        SizedBox(height: 12),
+        TextField(controller: descCtl, decoration: const InputDecoration(labelText: 'Descripción')),
+        if (editable) SizedBox(height: 20),
+        if (editable)
+          ElevatedButton(
+            onPressed: () {
+              c.name = nameCtl.text.trim();
+              c.description = descCtl.text.trim();
+              FirebaseFirestore.instance
+                  .collection('comunidades')
+                  .doc(c.id)
+                  .update({'name': c.name, 'description': c.description});
+              setState(() {});
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Detalles actualizados')));
             },
+            child: const Text('Guardar cambios'),
           ),
-        ],
-      ),
+      ],
     );
   }
 
-  Widget _buildJoinButton(FbCommunity community) {
-    final isUserParticipant = community.uidParticipants.contains(currentUserId);
+  Widget _buildMembersTab(FbCommunity c, bool editable) {
+    final modders = c.uidModders.split(',').map((e) => e.trim()).toSet();
 
-    if (isUserParticipant) {
-      return SizedBox.shrink();
-    }
-
-
-    return ElevatedButton.icon(
-      onPressed: () => _joinCommunity(community),
-      icon: Icon(Icons.group_add),
-      label: Text('Unirse'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? AppColors.accent // color azul marino oscuro para modo oscuro
-            : AppColors.primary, // turquesa para modo claro
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        elevation: 2,
-      ),
-    );
-
-  }
-
-  Widget _buildLeaveButton(FbCommunity community) {
-    return ElevatedButton.icon(
-      onPressed: () => _leaveCommunity(community),
-      icon: Icon(Icons.exit_to_app),
-      label: Text('Abandonar'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.red.shade600,
-        foregroundColor: Colors.white,
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        elevation: 2,
-      ),
-    );
-  }
-
-  Future<void> _leaveCommunity(FbCommunity community) async {
-    try {
-      community.uidParticipants.remove(
-          currentUserId); // Remover usuario de la lista
-
-      await _firebaseAdmin.saveFBData(
-        collectionPath: 'comunidades',
-        data: community.toFirestore(),
-        docId: community.id,
-      );
-
-      // Actualizar en DataHolder
-      DataHolder().joinedCommunities.removeWhere((c) => c.id == community.id);
-
-      setState(() {}); // Refrescar la UI
-    } catch (e) {
-      print('Error al abandonar la comunidad: $e');
-    }
-  }
-
-  Future<void> _joinCommunity(FbCommunity community) async {
-    try {
-      community.uidParticipants.add(currentUserId);
-      await _firebaseAdmin.saveFBData(
-        collectionPath: 'comunidades',
-        data: community.toFirestore(),
-        docId: community.id,
-      );
-      DataHolder().addCommunity(community);
-      setState(() {});
-    } catch (e) {
-      print('Error al unirse a la comunidad: $e');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    Icon _getCategoryIcon(String category) {
-      switch (category) {
-        case 'Deportes':
-          return Icon(Icons.sports_soccer, color: theme.colorScheme.secondary);
-        case 'Ocio':
-          return Icon(Icons.movie, color: theme.colorScheme.primary);
-        case 'Negocios':
-          return Icon(Icons.business_center, color: theme.colorScheme.tertiary ?? Colors.orangeAccent);
-        case 'Libros':
-          return Icon(Icons.menu_book, color: Colors.brown.shade300);
-        default:
-          return Icon(Icons.category, color: theme.disabledColor);
-      }
-    }
-
-    return Scaffold(
-      backgroundColor: theme.colorScheme.background,
-
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 80),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildCommunitySection(
-              title: 'Mis Comunidades',
-              communities: DataHolder().createdCommunities,
-              showEditAndDelete: true,
-            ),
-            _buildCommunitySection(
-              title: 'Comunidades a las que pertenezco',
-              communities: DataHolder().joinedCommunities,
-              showEditAndDelete: false,
-            ),
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('comunidades').snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return Center(child: CircularProgressIndicator(color: theme.colorScheme.primary));
-
-                final allCommunities = snapshot.data!.docs.map((doc) =>
-                    FbCommunity.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>)).toList();
-
-                final filteredCommunities = allCommunities.where((community) =>
-                !community.uidParticipants.contains(currentUserId) &&
-                    community.uidCreator != currentUserId &&
-                    (selectedCategory.isEmpty || selectedCategory == 'Todas' || community.category == selectedCategory) &&
-                    (searchName.isEmpty || community.name.toLowerCase().contains(searchName.toLowerCase()))
-                ).toList();
-
-                final displayedCommunities = (selectedCategory.isEmpty || selectedCategory == 'Todas') && searchName.isEmpty
-                    ? filteredCommunities.take(5).toList()
-                    : filteredCommunities;
-
-                return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Contenedor de búsqueda adaptado
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Buscar comunidades",
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              decoration: InputDecoration(
-                                hintText: 'Escribe el nombre...',
-                                hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
-                                prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface.withOpacity(0.7)),
-                                filled: true,
-                                fillColor: theme.colorScheme.surface,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: theme.colorScheme.primaryContainer),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              ),
-                              onChanged: (value) {
-                                setState(() {
-                                  searchName = value;
-                                });
-                              },
-                              style: TextStyle(color: theme.colorScheme.onSurface),
-                            ),
-                            const SizedBox(height: 20),
-                            Text(
-                              "Filtrar por categoría:",
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onPrimary.withOpacity(0.7),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            DropdownButtonFormField<String>(
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: theme.colorScheme.surface,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: theme.colorScheme.primaryContainer),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
-                                ),
-                              ),
-                              value: selectedCategory.isEmpty ? 'Todas' : selectedCategory,
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  selectedCategory = (newValue == 'Todas') ? '' : newValue ?? '';
-                                });
-                              },
-                              selectedItemBuilder: (context) {
-                                return ['Todas', 'Deportes', 'Ocio', 'Negocios', 'Libros'].map((category) {
-                                  return Row(
-                                    children: [
-                                      _getCategoryIcon(category),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        category,
-                                        style: TextStyle(color: theme.colorScheme.onSurface),
-                                      ),
-                                    ],
-                                  );
-                                }).toList();
-                              },
-                              items: ['Todas', 'Deportes', 'Ocio', 'Negocios', 'Libros'].map((category) {
-                                return DropdownMenuItem<String>(
-                                  value: category,
-                                  child: Row(
-                                    children: [
-                                      _getCategoryIcon(category),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        category,
-                                        style: TextStyle(color: theme.colorScheme.onSurface),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ),
-                      ),
-                      _buildCommunitySection(
-                        title: 'Comunidades Existentes',
-                        communities: displayedCommunities,
-                        showEditAndDelete: false,
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showCreateCommunityDialog,
-        backgroundColor: theme.colorScheme.secondary,
-        child: const Icon(Icons.add),
-        tooltip: 'Crear nueva comunidad',
-      ),
-    );
-  }
-
-
-
-
-
-  void _showCreateCommunityDialog() {
-    final nameController = TextEditingController();
-    final descriptionController = TextEditingController();
-    String selectedCategory = 'Deportes';
-    List<String> categories = ['Deportes', 'Ocio', 'Negocios', 'Libros'];
-
-    XFile? selectedImage;
-    Uint8List? imageBytes;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        final theme = Theme.of(context);
-        final colorScheme = theme.colorScheme;
-        final textTheme = theme.textTheme;
-
-        return AlertDialog(
-          backgroundColor: colorScheme.surface,
-          title: Text(
-            'Crear Comunidad',
-            style: textTheme.titleLarge?.copyWith(color: colorScheme.onSurface),
-          ),
-          content: StatefulBuilder(
-            builder: (context, setState) {
-              return SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      onTap: () async {
-                        final ImageSource? pickedSource = await showDialog<ImageSource>(
-                          context: context,
-                          builder: (BuildContext context) {
-                            final dialogTheme = Theme.of(context);
-                            final dialogColorScheme = dialogTheme.colorScheme;
-                            final dialogTextTheme = dialogTheme.textTheme;
-
-                            return AlertDialog(
-                              backgroundColor: dialogColorScheme.surface,
-                              title: Text(
-                                "Seleccionar Imagen",
-                                style: dialogTextTheme.titleLarge?.copyWith(color: dialogColorScheme.onSurface),
-                              ),
-                              content: Text(
-                                "¿Quieres tomar una foto o seleccionar de la galería?",
-                                style: dialogTextTheme.bodyMedium?.copyWith(color: dialogColorScheme.onSurface.withOpacity(0.7)),
-                              ),
-                              actions: <Widget>[
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(ImageSource.camera),
-                                  child: Text(
-                                    "Tomar Foto",
-                                    style: TextStyle(color: dialogColorScheme.primary),
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(ImageSource.gallery),
-                                  child: Text(
-                                    "Seleccionar de la Galería",
-                                    style: TextStyle(color: dialogColorScheme.primary),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-
-                        if (pickedSource != null) {
-                          final XFile? file = await ImagePicker().pickImage(source: pickedSource);
-                          if (file != null) {
-                            final bytes = await file.readAsBytes();
-                            setState(() {
-                              selectedImage = file;
-                              imageBytes = bytes;
-                            });
-                          }
-                        }
-                      },
-                      child: ClipOval(
-                        child: Container(
-                          width: 100,
-                          height: 100,
-                          color: colorScheme.onSurface.withOpacity(0.1),
-                          child: imageBytes != null
-                              ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                              : Icon(Icons.camera_alt, size: 40, color: colorScheme.onSurface.withOpacity(0.6)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: nameController,
-                      style: TextStyle(color: colorScheme.onSurface),
-                      decoration: InputDecoration(
-                        labelText: 'Nombre de la comunidad',
-                        labelStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: colorScheme.onSurface.withOpacity(0.3)),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: colorScheme.primary, width: 2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        fillColor: colorScheme.surfaceVariant,
-                        filled: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: descriptionController,
-                      style: TextStyle(color: colorScheme.onSurface),
-                      decoration: InputDecoration(
-                        labelText: 'Descripción de la comunidad',
-                        labelStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: colorScheme.onSurface.withOpacity(0.3)),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: colorScheme.primary, width: 2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        fillColor: colorScheme.surfaceVariant,
-                        filled: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: selectedCategory,
-                      dropdownColor: colorScheme.surface,
-                      style: TextStyle(color: colorScheme.onSurface),
-                      decoration: InputDecoration(
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: colorScheme.onSurface.withOpacity(0.3)),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: colorScheme.primary, width: 2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        filled: true,
-                        fillColor: colorScheme.surfaceVariant,
-                      ),
-                      onChanged: (String? newCategory) {
-                        if (newCategory != null) {
-                          setState(() {
-                            selectedCategory = newCategory;
-                          });
-                        }
-                      },
-                      items: categories.map((String category) {
-                        return DropdownMenuItem<String>(
-                          value: category,
-                          child: Text(category, style: TextStyle(color: colorScheme.onSurface)),
-                        );
-                      }).toList(),
-                    ),
-                  ],
+    return ListView(
+      children: c.uidParticipants.map((uid) {
+        final isMod = modders.contains(uid);
+        return ListTile(
+          title: Text(uid),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isMod)
+                Chip(label: Text('Mod')),
+              if (editable && !isMod)
+                TextButton(
+                  onPressed: () {
+                    modders.add(uid);
+                    c.uidModders = modders.join(',');
+                    FirebaseFirestore.instance
+                        .collection('comunidades')
+                        .doc(c.id)
+                        .update({'uidModders': c.uidModders});
+                    setState(() {});
+                  },
+                  child: const Text('Hacer mod'),
                 ),
-              );
-            },
+              if (editable)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () {
+                    c.uidParticipants.remove(uid);
+                    FirebaseFirestore.instance
+                        .collection('comunidades')
+                        .doc(c.id)
+                        .update({'uidParticipants': c.uidParticipants});
+                    setState(() {});
+                  },
+                ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancelar', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7))),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.primary,
-              ),
-              onPressed: () {
-                final name = nameController.text.trim();
-                final description = descriptionController.text.trim();
-                if (name.isNotEmpty && description.isNotEmpty) {
-                  _createCommunity(name, description, selectedCategory, selectedImage);
-                  Navigator.pop(context);
-                }
-              },
-              child: Text('Crear', style: TextStyle(color: colorScheme.onPrimary)),
-            ),
-          ],
         );
-      },
+      }).toList(),
     );
   }
 

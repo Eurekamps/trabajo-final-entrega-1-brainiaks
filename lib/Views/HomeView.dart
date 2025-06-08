@@ -8,6 +8,7 @@ import 'package:triboo/Statics/DataHolder.dart';
 import 'package:triboo/Views/CreatePostView.dart';
 
 
+import '../FBObjects/FBComentario.dart';
 import '../FBObjects/FbPerfil.dart';
 import '../Theme/AppColors.dart';
 
@@ -119,8 +120,10 @@ class _HomeViewState extends State<HomeView> {
         ],
       ),
 
-      // Botón flotante estilizado
-      floatingActionButton: FloatingActionButton(
+      // Mostrar u ocultar el botón flotante según el índice
+      floatingActionButton: _selectedCommunityIndex == 0
+          ? null
+          : FloatingActionButton(
         onPressed: _navigateToCreatePost,
         child: const Icon(Icons.add),
         backgroundColor: theme.floatingActionButtonTheme.backgroundColor,
@@ -129,9 +132,10 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
+
   Widget _buildCommunitiesStories() {
     final combinedCommunities = [
-      FbCommunity(id: 'all', name: 'Todo', avatar: '', uidCreator: '', uidModders: '', uidParticipants: [], description: '', category: ''), // ✅ burbuja de feed global
+      FbCommunity(id: 'all', name: 'Todo', avatar: '', uidCreator: '', uidModders: "", uidParticipants: [], description: '', category: ''), // ✅ burbuja de feed global
       ...DataHolder().createdCommunities,
       ...DataHolder().joinedCommunities.where(
             (joined) => !DataHolder().createdCommunities.any(
@@ -426,7 +430,7 @@ class _HomeViewState extends State<HomeView> {
 
                         final postRef = FirebaseFirestore.instance
                             .collection('comunidades')
-                            .doc(myComunitys[_selectedCommunityIndex].id)
+                            .doc(post.comunidadID)
                             .collection('posts')
                             .doc(post.id);
 
@@ -460,13 +464,38 @@ class _HomeViewState extends State<HomeView> {
                       },
                     ),
                     Text(
-                      '${post.likes} Likes',
+                      '${post.likes}',
                       style: TextStyle(color: theme.textTheme.bodyMedium?.color),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.chat_bubble_outline, color: theme.disabledColor),
-                      onPressed: () => _mostrarComentarios(post),
+                    FutureBuilder<QuerySnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection('comunidades')
+                          .doc(post.comunidadID)
+                          .collection('posts')
+                          .doc(post.id)
+                          .collection('comentarios')
+                          .get(),
+                      builder: (context, snapshot) {
+                        int cantidadComentarios = 0;
+                        if (snapshot.hasData) {
+                          cantidadComentarios = snapshot.data!.docs.length;
+                        }
+
+                        return Row(
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.chat_bubble_outline, color: theme.disabledColor),
+                              onPressed: () => _mostrarComentarios(post),
+                            ),
+                            Text(
+                              '$cantidadComentarios',
+                              style: TextStyle(color: theme.textTheme.bodyMedium?.color),
+                            ),
+                          ],
+                        );
+                      },
                     ),
+
                     const Spacer(),
 
                     if (!isReported)
@@ -536,6 +565,21 @@ class _HomeViewState extends State<HomeView> {
   }
 
   void _mostrarComentarios(FBPost post) {
+    final TextEditingController _comentarioController = TextEditingController();
+
+    //final String comunidadID = myComunitys[_selectedCommunityIndex - 1].id;
+    final comentariosRef = FirebaseFirestore.instance
+        .collection('comunidades')
+        .doc(post.comunidadID)
+        .collection('posts')
+        .doc(post.id)
+        .collection('comentarios')
+        .orderBy('fechaCreacion', descending: true)
+        .withConverter<FBComentario>(
+      fromFirestore: FBComentario.fromFirestore,
+      toFirestore: (comentario, _) => comentario.toFirestore(),
+    );
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -544,52 +588,172 @@ class _HomeViewState extends State<HomeView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.5,
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          builder: (context, scrollController) {
-            return Column(
-              children: [
-                Container(
-                  width: 40,
-                  height: 5,
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(10),
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.6,
+            minChildSize: 0.3,
+            maxChildSize: 0.95,
+            builder: (context, scrollController) {
+              return Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 5,
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                ),
-                Text(
-                  'Comentarios del post',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: ListView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      Center(
-                        child: Text(
-                          'Aquí aparecerán los comentarios...',
-                          style: TextStyle(
-                            color: Theme.of(context).disabledColor,
-                            fontSize: 14,
+                  Text(
+                    'Comentarios del post',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: StreamBuilder<QuerySnapshot<FBComentario>>(
+                      stream: comentariosRef.snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'No hay comentarios todavía.',
+                              style: TextStyle(
+                                color: Theme.of(context).disabledColor,
+                              ),
+                            ),
+                          );
+                        }
+
+                        final comentarios = snapshot.data!.docs;
+
+                        return ListView.builder(
+                          controller: scrollController,
+                          itemCount: comentarios.length,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          itemBuilder: (context, index) {
+                            final comentario = comentarios[index].data();
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                              leading: CircleAvatar(
+                                backgroundImage: (comentario.autorImagenURL != null &&
+                                    comentario.autorImagenURL!.isNotEmpty)
+                                    ? NetworkImage(comentario.autorImagenURL!)
+                                    : null,
+                                child: (comentario.autorImagenURL == null ||
+                                    comentario.autorImagenURL!.isEmpty)
+                                    ? Text(
+                                  comentario.autorApodo.isNotEmpty
+                                      ? comentario.autorApodo[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                )
+                                    : null,
+                              ),
+                              title: Text(comentario.autorApodo),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(comentario.texto),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _formatDate(comentario.fechaCreacion),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Theme.of(context).textTheme.bodySmall?.color,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  // Campo para escribir nuevo comentario
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _comentarioController,
+                            decoration: InputDecoration(
+                              hintText: 'Escribe un comentario...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: Theme.of(context).colorScheme.surface,
+                              contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            ),
                           ),
                         ),
-                      )
-                    ],
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.send),
+                          onPressed: () async {
+                            String texto = _comentarioController.text.trim();
+                            if (texto.isNotEmpty) {
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user == null) return;
+
+                              final autorID = user.uid;
+                              final autorApodo = DataHolder().userProfile!.apodo;
+                              final autorImagenURL = DataHolder().userProfile!.imagenURL;
+
+                              final nuevoComentario = {
+                                'texto': texto,
+                                'autorID': autorID,
+                                'autorApodo': autorApodo,
+                                'autorImagenURL': autorImagenURL,
+                                'fechaCreacion': FieldValue.serverTimestamp(),
+                              };
+
+                              try {
+                                await FirebaseFirestore.instance
+                                    .collection('comunidades')
+                                    .doc(post.comunidadID)
+                                    .collection('posts')
+                                    .doc(post.id)
+                                    .collection('comentarios')
+                                    .add(nuevoComentario);
+
+                                _comentarioController.clear();
+                                FocusScope.of(context).unfocus();
+                              } catch (e) {
+                                print('Error al guardar comentario: $e');
+                              }
+                            }
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         );
       },
     );
   }
+
+
 
 
   void _mostrarDialogoConversacion(String nombreUsuario, String autorId) {

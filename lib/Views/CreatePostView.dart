@@ -193,6 +193,7 @@ class _CreatePostViewState extends State<CreatePostView> {
         fechaCreacion: DateTime.now(),
         likes: 0, // Inicializamos con 0 likes
         reportes: 0, // Inicializamos con 0 reportes
+        comunidadID: widget.community.id,
       );
 
       // Guardar el post en Firestore dentro de la comunidad correspondiente

@@ -1,0 +1,2 @@
+C:/Users/Usuario Ferga 2/StudioProjects/trabajo-final-entrega-1-brainiaks/android/app/.cxx/Debug/1x2i506j/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/Usuario Ferga 2/StudioProjects/trabajo-final-entrega-1-brainiaks/android/app/.cxx/Debug/1x2i506j/x86_64/CMakeFiles/rebuild_cache.dir

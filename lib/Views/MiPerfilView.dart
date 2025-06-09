@@ -72,7 +72,7 @@ class MiPerfilView extends StatelessWidget {
                     style: theme.textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 24),
-                  Row(
+                  /*Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       OutlinedButton.icon(
@@ -90,7 +90,7 @@ class MiPerfilView extends StatelessWidget {
                         label: const Text('Salir'),
                       ),
                     ],
-                  ),
+                  ),*/
                 ],
               ),
             ),

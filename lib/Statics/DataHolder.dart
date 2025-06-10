@@ -140,6 +140,45 @@ class DataHolder {
     _createdCommunities.removeWhere((c) => c.id == communityId);
     _joinedCommunities.removeWhere((c) => c.id == communityId);
   }
+
+  Future<void> deleteCommunityFromFirebase(String communityId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('comunidades')
+          .doc(communityId)
+          .delete();
+
+      removeCommunity(communityId); // también actualiza local
+    } catch (e) {
+      print('Error al eliminar comunidad de Firebase: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> leaveCommunity(FbCommunity community) async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+
+      // Quitar al usuario del array
+      community.uidParticipants.remove(userId);
+
+      // Guardar la comunidad actualizada en Firestore
+      await FirebaseFirestore.instance
+          .collection('comunidades')
+          .doc(community.id)
+          .update({'uidParticipants': community.uidParticipants});
+
+      // Actualizar en memoria local
+      updateCommunity(community);
+      _joinedCommunities.removeWhere((c) => c.id == community.id);
+
+    } catch (e) {
+      print('Error al abandonar la comunidad: $e');
+      rethrow;
+    }
+  }
+
 // Actualiza en local
   void updateCommunity(FbCommunity updatedCommunity) {
     final index = allCommunities.indexWhere((community) => community.id == updatedCommunity.id);

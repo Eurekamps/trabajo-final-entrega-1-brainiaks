@@ -180,10 +180,19 @@ class _CommunityViewState extends State<CommunityView> with TickerProviderStateM
     );
 
     if (confirm == true) {
-      // Lógica de borrado real (simulada)
-      DataHolder().removeCommunity(community.id);
-      setState(() {});
+      try {
+        await DataHolder().deleteCommunityFromFirebase(community.id);
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Comunidad eliminada')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al eliminar comunidad: $e')),
+        );
+      }
     }
+
   }
 
   Future<void> _confirmLeaveCommunity(FbCommunity community) async {
@@ -207,10 +216,11 @@ class _CommunityViewState extends State<CommunityView> with TickerProviderStateM
     );
 
     if (confirm == true) {
-      community.uidParticipants.remove(currentUserId);
-      setState(() {});
+      await DataHolder().leaveCommunity(community);
+      setState(() {}); // Refresca la UI si es necesario
     }
   }
+
 
   void _showCreateCommunityDialog() {
     final nameController = TextEditingController();
